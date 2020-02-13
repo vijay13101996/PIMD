@@ -201,7 +201,7 @@ if(1):
             OTOC_arr = OTOC_f.position_matrix.compute_otoc_arr_t(vecs,x_arr,dx,dy,k_arr,vals,m_arr,t_arr,beta,n_eigen,OTOC_arr) 
             #OTOC_arr = OTOC(t_arr,beta)
             print('Pot details',Potentials_2D.n_barrier,Potentials_2D.r_c)
-            f = open("OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,basis_N,n_eigen,t_final),'wb')
+            f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,basis_N,n_eigen,t_final),'wb')
             pickle.dump(t_arr,f)
             pickle.dump(OTOC_arr,f)
             f.close()
@@ -214,7 +214,7 @@ if(1):
         ax.set_ylim([0.1,100])
         
         print('Pot details',Potentials_2D.n_barrier,Potentials_2D.r_c)
-        f = open("OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,30,30,t_final),'rb')
+        f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,30,30,t_final),'rb')
         t_arr = pickle.load(f)
         OTOC_arr = pickle.load(f)
         f.close()
@@ -222,14 +222,14 @@ if(1):
         ax.plot(t_arr,OTOC_arr,color='b')
         
         if(0):
-            f = open("OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,9,Potentials_2D.r_c,beta,30,30,t_final),'rb')
+            f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,9,Potentials_2D.r_c,beta,30,30,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr = pickle.load(f)
             f.close()
             
             #ax.plot(t_arr,OTOC_arr,color='m')
             
-            f = open("OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,25,r_c,beta,30,30,t_final),'rb')
+            f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,25,Potentials_2D.r_c,beta,30,30,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr = pickle.load(f)
             f.close()
@@ -242,35 +242,35 @@ if(1):
             plt.yscale('log')
             ax.set_ylim([0.1,100])
             
-            f = open("OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,80,80,t_final),'rb')
+            f = open("/home/vgs23/Pickle_files/OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,80,80,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr1 = pickle.load(f)
             f.close()
             
             #ax.plot(t_arr,(OTOC_arr1),color='g',label='80,80')
             
-            f = open("OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,90,90,t_final),'rb')
+            f = open("/home/vgs23/Pickle_files/OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,90,90,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr2 = pickle.load(f)
             f.close()
             
             #ax.plot(t_arr,OTOC_arr2,color='r',label='90,90')
             
-            f = open("OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,100,100,t_final),'rb')
+            f = open("/home/vgs23/Pickle_files/OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,100,100,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr3 = pickle.load(f)
             f.close()
             
             ax.plot(t_arr,(OTOC_arr3),color='b',label='100,100')
             
-            f = open("OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,50,40,t_final),'rb')
+            f = open("/home/vgs23/Pickle_files/OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,50,40,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr4 = pickle.load(f)
             f.close()
             
             #ax.plot(t_arr,(OTOC_arr4),color='m',label='50,40')
             
-            f = open("OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,50,100,t_final),'rb')
+            f = open("/home/vgs23/Pickle_files/OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,50,100,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr5 = pickle.load(f)
             f.close()
