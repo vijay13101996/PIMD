@@ -25,9 +25,9 @@ import pickle
 start_time = time.time()
 from Matsubara_potential import dpot
 from Matsubara_potential_hh import dpot_hh
-import Centroid_mean_force
+#import Centroid_mean_force
 import Ring_polymer_dynamics
-import Centroid_dynamics
+#import Centroid_dynamics
 import Quasicentroid_dynamics
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -104,7 +104,7 @@ if(1):
     #tcf = Quasicentroid_dynamics.compute_tcf(n_instance,N,beads,dpotential,beta,T,deltat)
     
     for i in range(n_instance):
-        f = open('QCMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,beta*beads,i,deltat,beads),'rb')
+        f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,beta*beads,i,deltat,beads),'rb')
         tcf+= pickle.load(f)
         #plt.plot(tcf_tarr,tcf,color='r')
         #plt.plot(tcf_tarr,np.cos(tcf_tarr),color='g')
