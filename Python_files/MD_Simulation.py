@@ -31,56 +31,21 @@ import Ring_polymer_dynamics
 import Quasicentroid_dynamics
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import Potentials_2D
 
-def dpotential(Q):
-    #print('hereh',np.shape(Q))
-    x = Q[:,0,...] #Change appropriately 
-    y = Q[:,1,...]
-    K=0.49
-    r_c = 1.89
-    
-    D0 = 0.18748
-    alpha = 1.1605
-    r_c = 1.8324
-    dpotx = 2.0*D0*alpha*x*(1 - np.exp(-alpha*(-r_c + (x**2 + y**2)**0.5)))*(x**2 + y**2)**(-0.5)*np.exp(-alpha*(-r_c + (x**2 + y**2)**0.5))
-    dpoty = 2.0*D0*alpha*y*(1 - np.exp(-alpha*(-r_c + (x**2 + y**2)**0.5)))*(x**2 + y**2)**(-0.5)*np.exp(-alpha*(-r_c + (x**2 + y**2)**0.5))
-    
-    #dpotx = 1.0*K*x*(-r_c + (x**2 + y**2)**0.5)*(x**2 + y**2)**(-0.5)
-    #dpoty = 1.0*K*y*(-r_c + (x**2 + y**2)**0.5)*(x**2 + y**2)**(-0.5)
-    
-    #dpotx = 1.0*x #+ 2*x*y + 4*x*(x**2 + y**2)
-    #dpoty = 1.0*y #+ x**2 - 1.0*y**2 + 4*y*(x**2 + y**2) 
-    ret = np.transpose(np.array([dpotx,dpoty]),(1,0,2))
-    #print(ret)
-    return ret
 
-def dpotential_morse(Q):
-    D0 =  0.18748
-    Q_c = 1.8324
-    alpha = 1.1605
-    return Q**3#2*D0*alpha*(1 - np.exp(-alpha*(Q - Q_c)))*np.exp(-alpha*(Q - Q_c))
-
-def potential(x,y):
-    K=0.49
-    r_c = 1.89
-    r= (x**2 + y**2)**0.5
-    V_rh = (K/2)*(r-r_c)**2
-    
-    D0 = 0.18748
-    alpha = 1.1605
-    r_c = 1.8324
-    V_cb = D0*(1 - np.exp(-alpha*(r-r_c)))**2
-    return V_cb
+potential = Potentials_2D.potential_cb
+dpotential = Potentials_2D.dpotential_cb
 
 if(0):
-    x_ar = np.arange(1.6,2,0.01)
-    y_ar = np.arange(1.6,2,0.01)
+    x_ar = np.arange(0.1,6.0,0.1)
+    y_ar = np.arange(0.1,6.0,0.1)
     X,Y = np.meshgrid(x_ar,y_ar)
     #plt.imshow(potential(X,Y))
     
     #fig = plt.figure()
     #ax = fig.add_subplot(111, projection='3d')
-    plt.plot(x_ar,potential(x_ar,0*y_ar))
+    plt.plot(x_ar,Potentials_2D.dpotential_cb_x(x_ar,0*y_ar))
     #Z = potential(X,Y)
     #Z[Z>1] = 1
     #ax.plot_surface(X,Y,Z)
@@ -88,7 +53,7 @@ if(0):
 
 deltat = 5e-1
 N = 100
-T = 10000.0#5000.0*deltat#3000*deltat
+T = 100.0#5000.0*deltat#3000*deltat
 tcf_tarr = np.arange(0,T+0.0001,T/100.0)
 tcf = np.zeros_like(tcf_tarr) 
 
@@ -101,10 +66,56 @@ print('deltat',deltat)
 print('beads',beads)
 
 if(1):
-    #tcf = Quasicentroid_dynamics.compute_tcf(n_instance,N,beads,dpotential,beta,T,deltat)
+    rforce = Quasicentroid_dynamics.QCMD_instance(beads,dpotential,beta)
+    print('time',time.time() - start_time)
+    
+    def force_xy(Q):
+        x = Q[:,0,...]
+        y = Q[:,1,...]
+        r = (x**2+y**2)**0.5
+        force_r = rforce(r)
+        #force_xy = force_r*abs(np.array([x/r,y/r]))
+        dpotx = force_r*(x/r)
+        dpoty = force_r*(y/r)
+        ret = np.transpose(np.array([dpotx,dpoty]),(1,0,2))
+        return ret#np.array([dpotx,dpoty])
+    #force_xy = np.vectorize(force_xy)
+    
+    x_ar = np.concatenate([np.arange(0.1,2.01,0.01),np.arange(-2.0,-0.1,0.01)])
+    y_ar = np.concatenate([np.arange(0.1,2.01,0.01),np.arange(-2.0,-0.1,0.01)])
+    X,Y = np.meshgrid(x_ar,y_ar)
+    print(np.shape(x_ar),np.shape(y_ar))
+    
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111, projection='3d')
+    #Z = force_xy(X,Y)[1,:,:]
+    #ax.plot_surface(X,Y,Z) 
+    #plt.imshow(force_xy(X,Y)[0,:,:])
+    #plt.show()
+    
+    Quasicentroid_dynamics.compute_tcf_QCMD(n_instance,N,force_xy,beta,T,deltat)
     
     for i in range(n_instance):
-        f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,beta*beads,i,deltat,beads),'rb')
+        f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_dt_{}_SAMP1.dat'.format(N*100,beta,i,deltat),'rb')
+        tcf += pickle.load(f)
+        f.close()
+        print(i,'completed')
+    
+    tcf/=(n_instance)
+    print(tcf[0],tcf[3],tcf[7])
+    plt.plot(tcf_tarr,tcf,color='r')
+    #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
+    plt.show()
+    
+if(0):
+    """
+    This code is for the Adiabatic implementation of Quasicentroid 
+    Molecular dynamics.
+    """
+    Quasicentroid_dynamics.compute_tcf_AQCMD(n_instance,N,beads,dpotential,beta,T,deltat)
+    
+    for i in range(n_instance):
+        f = open('/home/vgs23/Pickle_files/AQCMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,beta*beads,i,deltat,beads),'rb')
         tcf+= pickle.load(f)
         #plt.plot(tcf_tarr,tcf,color='r')
         #plt.plot(tcf_tarr,np.cos(tcf_tarr),color='g')
@@ -112,6 +123,7 @@ if(1):
         print(i,'completed')
         print('time',time.time() - start_time)
     
+    tcf/=(n_instance)
     plt.plot(tcf_tarr,tcf)
     plt.show()
 
@@ -124,7 +136,7 @@ if(0):
     Centroid_dynamics.compute_tcf(n_instance,N,beads,dpotential_morse,beta,T,deltat)
 
     for i in range(n_instance):
-        f = open('ACMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'rb')
+        f = open('/home/vgs23/Pickle_files/ACMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'rb')
         tcf += pickle.load(f)
         f.close()
         print(i,'completed')
@@ -146,7 +158,7 @@ if(0):
     Ring_polymer_dynamics.compute_tcf(n_instance,N,beads,dpotential,beta,T,deltat)
     
     for i in range(n_instance):
-        f = open('RPMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'rb')
+        f = open('/home/vgs23/Pickle_files/RPMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'rb')
         tcf += pickle.load(f)
         f.close()
         print(i,'completed')
@@ -168,7 +180,7 @@ if(0):
     
     Ring_polymer_dynamics.compute_tcf(n_instance,N,1,xforce,beta, T,deltat)
     for i in range(n_instance):
-        f = open('RPMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'rb')
+        f = open('/home/vgs23/Pickle_files/CMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'rb')
         tcf += pickle.load(f)
         f.close()
         print(i,'completed')

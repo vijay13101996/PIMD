@@ -193,9 +193,8 @@ def dsigma(Q):
 
 
 def SHAKE(swarmobj,q0,deltat,lambda_curr,R):
-
+    #print('R',R)
     q_d=swarmobj.q.copy()
-    #lambda_curr = np.zeros_like(lambda_curr)
     count=0 
     while((abs(sigma(q_d,R)) > 1e-3).any()): 
         
@@ -212,14 +211,14 @@ def SHAKE(swarmobj,q0,deltat,lambda_curr,R):
             #print('unstable init', np.sum(q0,axis=2))
             #print('in-sigma',(abs(sigma(q_d,1.0))), q_d)
             print('end')
-            
             #break  
         dlambda = -swarmobj.m*sigma(q_d,R)/denom 
         dlambda = np.tile(dlambda,(np.shape(swarmobj.q)[1],np.shape(swarmobj.q)[2],1))
         dlambda = np.transpose(dlambda,(2,0,1))
         lambda_curr+=dlambda
         count+=1
-        if(count>5e2):
+        
+        if(count>1e3):
             print('count exceeded')#,(abs(sigma(q_d,R)))[abs(sigma(q_d,R))>1e-2]  )
             print(np.where(abs(sigma(q_d,R))>1e-2  ))
             break
@@ -263,39 +262,42 @@ def dpotential_qcentroid(QC_q,swarmobj,dpotential):
     ret = -(QC_q/qc_norm)*radial_force
     return ret
 
-def vv_step_constrained(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,thermal): 
+def vv_step_constrained(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,adiabatic): 
     q0 = swarmobj.q.copy()
     
-    QC_p+= -(deltat/2)*dpotential_qcentroid(QC_q,swarmobj,dpotential)
-    #print('QC_force',dpotential_qcentroid(QC_q,swarmobj,dpotential)[0],QC_p[0])
+    if(QCMD!=1):
+        QC_p+= -(deltat/2)*dpotential_qcentroid(QC_q,swarmobj,dpotential)
     swarmobj.p+= -(deltat/2)*dpotential(swarmobj.q)
-    if(thermal==1):
-        swarmobj.p+= -(deltat/2)*MD_System.dpotential_ring(swarmobj)
-    else:
+    
+    if(adiabatic==1):
         adiabatize_p(swarmobj,deltat)
-    RATTLE(swarmobj.q,swarmobj.p)
-    #print('QC_p after rattle',QC_p[0])
-    QC_q+= (deltat/swarmobj.m)*QC_p
-    if(thermal==1):
-        swarmobj.q+= (deltat/swarmobj.m)*swarmobj.p
     else:
+        swarmobj.p+= -(deltat/2)*MD_System.dpotential_ring(swarmobj)
+    RATTLE(swarmobj.q,swarmobj.p)
+    
+    if(QCMD!=1):
+        QC_q+= (deltat/swarmobj.m)*QC_p
+    
+    if(adiabatic==1):
         adiabatize_q(swarmobj,deltat)
+    else:
+        swarmobj.q+= (deltat/swarmobj.m)*swarmobj.p
+        
     qc_norm = (QC_q[:,0]**2 + QC_q[:,1]**2)**0.5
     
     SHAKE(swarmobj,q0,deltat,lambda_curr,qc_norm)
     
-    QC_p+= -(deltat/2)*dpotential_qcentroid(QC_q,swarmobj,dpotential)
+    if(QCMD!=1):
+        QC_p+= -(deltat/2)*dpotential_qcentroid(QC_q,swarmobj,dpotential)
     swarmobj.p+= -(deltat/2)*dpotential(swarmobj.q) 
-    if(thermal==1):
-        swarmobj.p+= -(deltat/2)*MD_System.dpotential_ring(swarmobj)
-    else:
+    
+    if(adiabatic==1):
         adiabatize_p(swarmobj,deltat)
+    else:
+        swarmobj.p+= -(deltat/2)*MD_System.dpotential_ring(swarmobj)
     
     RATTLE(swarmobj.q,swarmobj.p)
     
-    #print('sigma',sigma(swarmobj.q,qc_norm)[0])
-    #print('check',QC_q[0])
-    #print(np.sum(swarmobj.q[43][0])/20,np.sum(swarmobj.q[43][1])/20)
     #plt.plot(swarmobj.q[0][0],swarmobj.q[0][1])
     #plt.scatter(swarmobj.q[0][0],swarmobj.q[0][1])
     x_c = np.mean(swarmobj.q[0][0])
@@ -331,7 +333,7 @@ def vv_step_qcmd_adiabatize(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng
     
     RATTLE(swarmobj.q,swarmobj.p)
     
-    vv_step_constrained(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,0)
+    vv_step_constrained(0,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,1)
     
     #rand_gaus = rng.normal(0.0,1.0,np.shape(QC_q))
     #QC_p[:] = c1_Q*QC_p + swarmobj.sm*(1/(MD_System.beta))**0.5*c2_Q*rand_gaus
@@ -345,7 +347,7 @@ def vv_step_qcmd_adiabatize(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng
     
     RATTLE(swarmobj.q,swarmobj.p)
     
-def vv_step_qcmd_thermostat(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng):
+def vv_step_qcmd_thermostat(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng):
     global c1,c2
     gamma_qc =1.0
     c1_Q = np.exp(-(deltat/2.0)*gamma_qc)
@@ -362,7 +364,7 @@ def vv_step_qcmd_thermostat(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng
     
     RATTLE(swarmobj.q,swarmobj.p)
     
-    vv_step_constrained(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,1)
+    vv_step_constrained(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,0)
     
     rand_gaus = rng.normal(0.0,1.0,np.shape(QC_q))
     QC_p[:] = c1_Q*QC_p + swarmobj.sm*(1/(MD_System.beta))**0.5*c2_Q*rand_gaus

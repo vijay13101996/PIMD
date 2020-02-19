@@ -139,16 +139,31 @@ A = np.array([[[-40,-30,-20,-10,0,10,20,30,40]]])
 #print(np.matmul(Transf.T,A))
 
 A = np.array([[[0,1,2],[3,4,5]]])
-w = np.array([1,2,3])
+B = np.array([1,2,3])
 #print(A*w)
 
-A = np.random.rand(200,4)
-B =np.random.rand(4)
-print(np.shape(A),np.shape(B))
-print(np.shape(A*B))
+#A = np.random.rand(200,4)
+#B =np.random.rand(4)
+#print(np.shape(A),np.shape(B))
+#print(np.shape(A*B))
 
-A = 0.0
-print(np.shape(A))
+#A = 0.0
+#print(np.shape(A))
+
+
+import h5py
+#a = np.random.random(size=(100,20))
+h5f = h5py.File('data.h5', 'w')
+h5f.create_dataset('A',data=A)
+h5f.create_dataset('B',data=B)
+h5f.close()
+
+h5f = h5py.File('data.h5','r')
+A = h5f['A'][:]
+B=  h5f['B'][:]
+h5f.close()
+
+print('b',B,'A',A)
 
 #for i in range(int(len(A)/2)):
 #    rearr[i]=-(2*(i+1))

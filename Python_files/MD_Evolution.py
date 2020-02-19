@@ -46,11 +46,11 @@ def time_evolve_qcmd(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,T,rng):
             #plt.scatter(QC_q[0][0],QC_q[0][1])
             plt.show()
 
-def time_evolve_qcmd_therm(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,T,rng):
+def time_evolve_qcmd_therm(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,T,rng):
     t=0.0
     while (abs(t-T)>1e-4):
         #vv_step_constrained(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat)
-        vv_step_qcmd_thermostat(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng)
+        vv_step_qcmd_thermostat(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng)
         t+=deltat
         
 def time_evolve(CMD,Matsubara,M,swarmobj,dpotential,deltat,T):

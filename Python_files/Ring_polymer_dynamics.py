@@ -31,7 +31,7 @@ def RPMD_instance(rng,N,beads,dpotential,beta,T,deltat):
     CMD=0
     
     n_inst = 10
-    func = partial(corr_function_upgrade,CMD,Matsubara,beads,swarmobject,dpotential,MD_System.mom_op,MD_System.mom_op,T,deltat)
+    func = partial(corr_function_upgrade,CMD,Matsubara,beads,swarmobject,dpotential,MD_System.pos_op,MD_System.pos_op,T,deltat)
     results = pool.map(func, range(n_inst))
     
     pool.close()
@@ -42,7 +42,7 @@ def compute_tcf(n_RPMD_instance,N,beads,dpotential,beta,T,deltat):
     
     for i in range(n_RPMD_instance):
         tcf =  RPMD_instance((i+1)*100,N,beads,dpotential,beta,T,deltat)
-        f = open('RPMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'wb')
+        f = open('/home/vgs23/Pickle_files/RPMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'wb')
         pickle.dump(tcf,f)
         #plt.plot(tcf_tarr,tcf,color='r')
         #plt.plot(tcf_tarr,np.cos(tcf_tarr),color='g')

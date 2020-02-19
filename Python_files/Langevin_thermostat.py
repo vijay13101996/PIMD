@@ -35,37 +35,37 @@ def potential(x,y):
     V_cb = D0*(1 - np.exp(-alpha*(r-r_c)))**2
     return V_cb
 
-def qcmd_thermalize(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,thermtime,rng):
+def qcmd_thermalize(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,thermtime,rng):
     t=0.0
     etherm = np.zeros(1)
     tarr.append(t)
     Velocity_verlet.set_therm_param(deltat,MD_System.gamma)
     count=0
-    x_ar= np.arange(1,1.5,0.01)
+    x_ar= np.arange(1.0,1.5,0.01)
     y_ar = np.arange(1,1.5,0.01)
     X,Y = np.meshgrid(x_ar,y_ar)
     
     
     while (t<=thermtime):
         #print('qbefore',swarmobj.q[10])
-        vv_step_qcmd_thermostat(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng)
+        vv_step_qcmd_thermostat(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng)
         t+=deltat
         if(0):#count%10==0):
             print('t',t)
-            print('q',swarmobj.q[17])
+            print('q',swarmobj.q[0])
             
             axes = plt.gca()
-            axes.set_xlim([1.2,1.4])
-            axes.set_ylim([1.2,1.4])
+            #axes.set_xlim([0.0,1.5])
+            #axes.set_ylim([0.0,1.5])
             
-            #plt.plot(swarmobj.q[62][0],swarmobj.q[62][1])
-            #plt.scatter(swarmobj.q[62][0],swarmobj.q[62][1])
+            plt.plot(swarmobj.q[0][0],swarmobj.q[0][1])
+            plt.scatter(swarmobj.q[0][0],swarmobj.q[0][1])
             #plt.scatter(QC_q[62][0],QC_q[62][1])
             
-            
+            #print('QC_q',QC_q)
             #plt.imshow(potential(X,Y))#,origin='lower')
             #plt.plot(QC_q[:,0],QC_q[:,1])
-            plt.scatter(QC_q[:,0],QC_q[:,1])
+            #plt.scatter(QC_q[:,0],QC_q[:,1])
             plt.show()
         count+=1
 

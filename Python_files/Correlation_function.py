@@ -26,17 +26,12 @@ def corr_function_QCMD(swarmobj,QC_q,QC_p,lambda_curr,A,B,time_corr,deltat,dpote
     A_arr = np.zeros((len(tcf_taux),)+QC_q.shape)
     B_arr = np.zeros_like(A_arr)
     n_approx = 5
-    #print('q',swarmobj.q)
-    #print('p',swarmobj.p)
-    qcmd_thermalize(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,1000,rng)
+    qcmd_thermalize(0,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,1000,rng)
     kin_en = swarmobj.sys_kin()
-    print('kin en', kin_en)
-    print('kin_en qc',np.sum(QC_p*QC_p)/(2*swarmobj.m))
+    #print('kin en', kin_en)
+    #print('kin_en qc',np.sum(QC_p*QC_p)/(2*swarmobj.m))
     qcx=[]#QC_q[:,0]
     qcy=[]#QC_q[:,1]
-    #plt.plot(qcx,qcy)
-    #plt.scatter(qcx,qcy)
-    #plt.show()
     
     for j in range(n_approx):
         
@@ -47,33 +42,22 @@ def corr_function_QCMD(swarmobj,QC_q,QC_p,lambda_curr,A,B,time_corr,deltat,dpote
             time_evolve_qcmd(swarmobj, QC_q,QC_p,lambda_curr,dpotential, deltat, tcf_taux[i]-tcf_taux[i-1],rng)
             A_arr[i] = A(QC_q,QC_p)
             B_arr[i] = B(QC_q,QC_p)
-            #print('QC_p one step',QC_p[0],QC_q[0])
-            #qcx.append(QC_q[0][0])
-            #qcy.append(QC_q[0][1])
-            #plt.plot(swarmobj.q[0][0],swarmobj.q[0][1])
-            #plt.scatter(swarmobj.q[0][0],swarmobj.q[0][1])
-            #plt.plot(qcx,qcy)
-            #plt.scatter(qcx,qcy)
-            #plt.show()
         
         A_arr[len(tcf):,:,:] = 0.0
         tcf_cr = convolution(A_arr,B_arr,0)
         tcf_cr = tcf_cr[:len(tcf),:,:] #Truncating the padded part
         tcf_cr = np.sum(tcf_cr,axis=2) #Summing over the dimension (Dot product)
         tcf+= np.sum(tcf_cr,axis=1)
-        #print(A_arr[len(tcf_taux)-1],B_arr[len(tcf)-1])
-        #plt.plot(tcf_tarr,tcf)#B_arr[:len(tcf_tarr),0,0])
-        #plt.plot(tcf_tarr,A_arr[:len(tcf_tarr),0,0])
-        #plt.show()
         
 #        for i in range(len(tcf)):
 #            for k in range(len(tcf)):
 #                #print(A_arr[i+j]*B_arr[j] + B_arr[i+j]*A_arr[j])
 #                tcf[i] += np.sum(A_arr[i+k]*B_arr[k] + B_arr[i+k]*A_arr[k]) 
         
-        print('j finished')
-        qcmd_thermalize(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,200.0,rng)
+        #print('j finished')
+        qcmd_thermalize(0,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,200.0,rng)
     
+    print('Dimension:', MD_System.dimension)
     tcf/=(n_approx*swarmobj.N*len(tcf)*MD_System.dimension)
     return tcf
 
@@ -124,17 +108,16 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
     thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,1000,rng)
     n_approx = 10
     print('kin en',swarmobj.sys_kin())
+    #print('time_corr',time_corr)
      #The above line have to be treated on a case to case basis
     for j in range(n_approx):
-        
+        #print('j',j)
         A_arr[0] = A(swarmobj.q,swarmobj.p)
         B_arr[0] = B(swarmobj.q,swarmobj.p)
-        print('j',j)
         if(1):
             for i in range(1,len(tcf_taux)):
                 
                 time_evolve(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1])
-                #print('here')
                 #time_evolve_nc(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1],rng)
                 A_arr[i] = A(swarmobj.q,swarmobj.p)
                 B_arr[i] = B(swarmobj.q,swarmobj.p)
@@ -148,7 +131,7 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
         tcf_cr = np.sum(tcf_cr,axis=2) #Summing over the dimension (Dot product)
         tcf+= np.sum(tcf_cr,axis=1)    #Summing over the particles
                # --- This part above is working alright!
-        
+        #print('j ended',j)
 #        for i in range(len(tcf)):
 #            for k in range(len(tcf)):
 #                #print(A_arr[i+j]*B_arr[j] + B_arr[i+j]*A_arr[j])

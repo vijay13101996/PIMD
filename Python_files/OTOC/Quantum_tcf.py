@@ -19,11 +19,14 @@ import pickle
 import importlib
 import OTOC_f
 import cProfile
+import sys
+sys.path.insert(1,'/home/vgs23/Python_files/')
 import Potentials_1D
 import Potentials_2D
 import H_matrix_1D
 import H_matrix_2D
 import H_diagonalization
+import h5py
 
 importlib.reload(OTOC_f)
 start_time= time.time()
@@ -35,7 +38,7 @@ f2py -c --f90flags="-O3" -m OTOC_f OTOC_fortran.f90
 These are the command line codes to compile and wrap the relevant FORTRAN functions for computing the OTOC.
 """
 L = 6#3*np.pi
-N = 50
+N = 120
 dx = L/N
 dy= L/N
 a = -L
@@ -83,33 +86,6 @@ OTOC for a 2D system.
 potential_2D = Potentials_2D.potential_lg
 pot_key = 'Lorenz_gas'#'Quartic'#
 
-
-if(1):
-    #H_diagonalization.Diagonalize_2D(x,dx,y,dy,a,b,N,potential_2D,vals,vecs)
-    H_matrix_1D.hbar=hbar
-    H_matrix_1D.mass=mass
-    vecs = np.zeros(((N+1)**2,(N+1)**2))
-    vals = np.zeros((N+1)**2)
-    H_diagonalization.Diagonalize_2D(x,dx,y,dy,a,b,N,potential_2D,vals,vecs)
-    
-    print(np.shape(vecs),np.shape(vals))
-    
-    f = open("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}_Ls_{}_rc_{}.dat".format(pot_key,N,Potentials_2D.Ls,Potentials_2D.r_c),'wb')
-        
-    pickle.dump(vecs,f)
-    pickle.dump(vals,f)
-    f.close()
-    
-    def eigenstate(vector):
-        temp = H_matrix_2D.tuple_index(N)
-        wf = np.zeros((N+1,N+1))
-        for p in range(len(temp)):
-            i = temp[p][0]
-            j = temp[p][1]
-            wf[i][j] = vector[p]
-            
-        return wf
-    
 if(1):
     #wf = eigenstate(vecs[:,26])
     #print('norm',np.sum(vecs[:,2]*vecs[:,2]*dx*dy))
@@ -131,10 +107,44 @@ if(1):
     
     #plt.plot(x,vecs[:,4])
     #plt.show()
+
+if(1):
+    #H_diagonalization.Diagonalize_2D(x,dx,y,dy,a,b,N,potential_2D,vals,vecs)
+    H_matrix_1D.hbar=hbar
+    H_matrix_1D.mass=mass
+    vecs = np.zeros(((N+1)**2,(N+1)**2))
+    vals = np.zeros((N+1)**2)
+    H_diagonalization.Diagonalize_2D(x,dx,y,dy,a,b,N,potential_2D,vals,vecs)
+    
+    print(np.shape(vecs),np.shape(vals))
+    print('vals first few',vals[:40])
+    
+#    f = open("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}_Ls_{}_rc_{}_n_barrier_{}.dat".format(pot_key,N,Potentials_2D.Ls,Potentials_2D.r_c,Potentials_2D.n_barrier),'wb')        
+#    pickle.dump(vecs,f)
+#    pickle.dump(vals,f)
+#    f.close()
+    
+    h5f = h5py.File("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}_Ls_{}_rc_{}_n_barrier_{}.h5".format(pot_key,N,Potentials_2D.Ls,Potentials_2D.r_c,Potentials_2D.n_barrier), 'w')
+    h5f.create_dataset('vecs',data=vecs)
+    h5f.create_dataset('vals',data=vals)
+    h5f.close()
+
+
+    def eigenstate(vector):
+        temp = H_matrix_2D.tuple_index(N)
+        wf = np.zeros((N+1,N+1))
+        for p in range(len(temp)):
+            i = temp[p][0]
+            j = temp[p][1]
+            wf[i][j] = vector[p]
+            
+        return wf
+    
+
 #------------------------------------------------
 print('time 1',time.time()-start_time)
    
-if(1):   
+if(0):   
     
     """
     This part of the code shall remain the same, even when other
@@ -146,11 +156,18 @@ if(1):
     basis_N = 30
     n_eigen = 30
     basis_x = np.zeros((N,N))
-    f = open("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}_Ls_{}_rc_{}.dat".format(pot_key,N,Potentials_2D.Ls,Potentials_2D.r_c),'rb')   
-    vecs = pickle.load(f)
-    vals = pickle.load(f)
-    f.close()
+#    f = open("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}_Ls_{}_rc_{}_n_barrier_{}.dat".format(pot_key,N,Potentials_2D.Ls,Potentials_2D.r_c,Potentials_2D.n_barrier),'rb')   
+#    vecs = pickle.load(f)
+#    vals = pickle.load(f)
+#    f.close()
     
+    h5f = h5py.File("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}_Ls_{}_rc_{}_n_barrier_{}.h5".format(pot_key,N,Potentials_2D.Ls,Potentials_2D.r_c,Potentials_2D.n_barrier), 'r')
+    vecs = h5f['vecs'][:]
+    vals = h5f['vals'][:]
+    h5f.close()
+    
+    vecs = vecs[:,:40]
+    vals = vals[:40]
     #x_arr = x[1:len(x)-1]
     """
     The code below reassigns the position coordinates of a 2D system 
@@ -198,6 +215,7 @@ if(1):
         OTOC_arr =np.zeros_like(t_arr)
         
         if(1):
+            print('vals,vecs',np.shape(vecs),np.shape(vals))
             OTOC_arr = OTOC_f.position_matrix.compute_otoc_arr_t(vecs,x_arr,dx,dy,k_arr,vals,m_arr,t_arr,beta,n_eigen,OTOC_arr) 
             #OTOC_arr = OTOC(t_arr,beta)
             print('Pot details',Potentials_2D.n_barrier,Potentials_2D.r_c)
@@ -211,14 +229,15 @@ if(1):
         fig = plt.figure(1)
         ax = fig.add_subplot(1,1,1)
         plt.yscale('log')
-        ax.set_ylim([0.1,100])
+        #ax.set_ylim([0.1,100])
         
         print('Pot details',Potentials_2D.n_barrier,Potentials_2D.r_c)
-        f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,30,30,t_final),'rb')
+        f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,basis_N,n_eigen,t_final),'rb')
         t_arr = pickle.load(f)
         OTOC_arr = pickle.load(f)
         f.close()
         
+        print('OTOC_arr',OTOC_arr)
         ax.plot(t_arr,OTOC_arr,color='b')
         
         if(0):

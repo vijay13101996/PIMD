@@ -25,7 +25,7 @@ def CMD_instance(beads,dpotential,beta):
     importlib.reload(Velocity_verlet)
     Centroid_mean_force.mean_force_calculation(dpotential)
      
-    f = open("CMD_Force_Morse_B_{}_NB_{}_100_10.dat".format(MD_System.beta,MD_System.n_beads),'rb')       
+    f = open("/home/vgs23/Pickle_files/CMD_Force_Morse_B_{}_NB_{}_100_10.dat".format(MD_System.beta,MD_System.n_beads),'rb')       
     data = np.loadtxt(f)
     Q = data[:,0]
     CMD_force = data[:,1]
@@ -65,7 +65,7 @@ def compute_tcf(n_ACMD_instance,N,beads,dpotential,beta,T,deltat):
     
     for i in range(n_ACMD_instance):
         tcf =  ACMD_instance((i+1)*100,N,beads,dpotential,beta,T,deltat)
-        f = open('ACMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'wb')
+        f = open('/home/vgs23/Pickle_files/ACMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'wb')
         pickle.dump(tcf,f)
         #plt.plot(tcf_tarr,tcf,color='r')
         #plt.plot(tcf_tarr,np.cos(tcf_tarr),color='g')
