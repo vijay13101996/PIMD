@@ -35,6 +35,8 @@ def radial_to_cartesian(rforce):
         return force_xy
     return force_2D
         
+def potential_harmonic(x,y):
+    return 0.5*(x**2+y**2)
 
 def potential_sb(x,y):
 #    if(abs(x)<Le/2):
@@ -90,6 +92,16 @@ def potential_coupled_quartic(x,y):
     b=0.1
     return (b/4.0)*(x**4 + y**4) + 0.5*x**2*y**2
 
+def dpotential_coupled_quartic(Q):
+    b=0.1
+    x = Q[:,0,...] #Change appropriately 
+    y = Q[:,1,...]
+    dpotx = x#(b/4.0)*(4*x**3 + y**4) + x*y**2
+    dpoty = y#(b/4.0)*(x**4 + 4*y**3) + x**2*y
+    
+    ret = np.transpose(np.array([dpotx,dpoty]),(1,0,2))
+    #print(ret)
+    return ret
 
 def potential_cb(x,y):
     
@@ -147,8 +159,8 @@ def dpotential_morse(Q):
     alpha = 1.1605
     return 2*D0*alpha*(1 - np.exp(-alpha*(Q - Q_c)))*np.exp(-alpha*(Q - Q_c))
 
-def potential_quartic(Q):
-    return 0.25*Q**4
+def potential_quartic(x,y):
+    return 0.25*(x**4+y**4)
 
 def dpotential_quartic(Q):
     return Q**3

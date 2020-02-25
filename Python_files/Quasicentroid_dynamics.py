@@ -110,7 +110,7 @@ def compute_tcf_AQCMD(n_QCMD_instance,N,beads,dpotential,beta,T,deltat):
     print('beta',beta)
     for i in range(n_QCMD_instance):
         tcf =  AQCMD_instance((i+1)*100,N,beads,dpotential,beta,T,deltat)
-        f = open('/home/vgs23/Pickle_files/AQCMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'wb')
+        f = open('/home/vgs23/Pickle_files/AQCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,T,deltat,MD_System.n_beads),'wb')
         pickle.dump(tcf,f)
         #plt.plot(tcf_tarr,tcf,color='r')
         #plt.plot(tcf_tarr,np.cos(tcf_tarr),color='g')
@@ -125,7 +125,7 @@ def compute_tcf_QCMD(n_instance,N,dpotential,beta,T,deltat):
     for i in range(n_instance):
         tcf =  Ring_polymer_dynamics.RPMD_instance((i+1)*100,N,1,dpotential,beta,T,deltat)
         print('beta',MD_System.beta,'n_beads',MD_System.n_beads,'T',T)
-        f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_dt_{}_SAMP1.dat'.format(N*100,MD_System.beta,i,deltat),'wb')
+        f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP2.dat'.format(N*100,MD_System.beta,i,T,deltat),'wb')
         pickle.dump(tcf,f)
         #plt.plot(tcf_tarr,tcf,color='g')
         #plt.plot(tcf_tarr,np.cos(tcf_tarr),color='g')

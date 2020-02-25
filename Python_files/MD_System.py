@@ -65,7 +65,7 @@ def system_definition(beta_g,n_b,dim,derivpotential):
     
     w_arr = rearrange(w_arr)
     
-    omega = 5.0
+    omega = 32.0
     print('omega',omega)
     w_arr_scaled = np.ones(n_beads)*omega
     w_arr_scaled[0]=0.0
@@ -129,7 +129,7 @@ class swarm:
         self.q = None
         self.p = None
         self.N = N
-        self.m = 1741.1#
+        self.m = 1.0#1741.1#
         self.sm = np.sqrt(self.m)
         self.kinen = 0.0
         self.poten = 0.0 

@@ -105,7 +105,7 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
     A_arr = np.zeros((len(tcf_taux),)+swarmobj.q.shape)
     B_arr = np.zeros_like(A_arr)
 
-    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,1000,rng)
+    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,20,rng)
     n_approx = 10
     print('kin en',swarmobj.sys_kin())
     #print('time_corr',time_corr)
@@ -121,7 +121,7 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
                 #time_evolve_nc(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1],rng)
                 A_arr[i] = A(swarmobj.q,swarmobj.p)
                 B_arr[i] = B(swarmobj.q,swarmobj.p)
-                
+        
         A_centroid = np.sum(A_arr,axis=3)/MD_System.n_beads
         B_centroid = np.sum(B_arr,axis=3)/MD_System.n_beads
         
@@ -137,7 +137,7 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
 #                #print(A_arr[i+j]*B_arr[j] + B_arr[i+j]*A_arr[j])
 #                tcf[i] += np.sum(A_centroid[i+k]*B_centroid[k] + B_centroid[i+k]*A_centroid[k]) 
     #tcf[i] += np.sum(A_0*B_t)
-        thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,200,rng)
+        thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,5,rng)
     tcf/=(n_approx*swarmobj.N*len(tcf)*MD_System.dimension)
 
     return tcf

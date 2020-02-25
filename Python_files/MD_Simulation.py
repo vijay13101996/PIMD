@@ -34,8 +34,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import Potentials_2D
 
 
-potential = Potentials_2D.potential_cb
-dpotential = Potentials_2D.dpotential_cb
+potential = Potentials_2D.potential_coupled_quartic#cb
+dpotential = Potentials_2D.dpotential_coupled_quartic#cb
 
 if(0):
     x_ar = np.arange(0.1,6.0,0.1)
@@ -51,21 +51,21 @@ if(0):
     #ax.plot_surface(X,Y,Z)
     plt.show()
 
-deltat = 5e-1
+deltat = 1e-2
 N = 100
-T = 100.0#5000.0*deltat#3000*deltat
+T = 50.0#5000.0*deltat#3000*deltat
 tcf_tarr = np.arange(0,T+0.0001,T/100.0)
 tcf = np.zeros_like(tcf_tarr) 
 
-beads=10
-beta=1000.0    # Take care of redefinition of beta, when using QCMD!
+beads=1
+beta=1.0    # Take care of redefinition of beta, when using QCMD!
 n_instance = 1
 print('N',N)#*100*n_instance)
 print('Beta',MD_System.beta)
 print('deltat',deltat)
 print('beads',beads)
 
-if(1):
+if(0):
     rforce = Quasicentroid_dynamics.QCMD_instance(beads,dpotential,beta)
     print('time',time.time() - start_time)
     
@@ -96,7 +96,7 @@ if(1):
     Quasicentroid_dynamics.compute_tcf_QCMD(n_instance,N,force_xy,beta,T,deltat)
     
     for i in range(n_instance):
-        f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_dt_{}_SAMP1.dat'.format(N*100,beta,i,deltat),'rb')
+        f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP1.dat'.format(N*100,beta,i,T,deltat),'rb')
         tcf += pickle.load(f)
         f.close()
         print(i,'completed')
@@ -112,10 +112,10 @@ if(0):
     This code is for the Adiabatic implementation of Quasicentroid 
     Molecular dynamics.
     """
-    Quasicentroid_dynamics.compute_tcf_AQCMD(n_instance,N,beads,dpotential,beta,T,deltat)
+    #Quasicentroid_dynamics.compute_tcf_AQCMD(n_instance,N,beads,dpotential,beta,T,deltat)
     
     for i in range(n_instance):
-        f = open('/home/vgs23/Pickle_files/AQCMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,beta*beads,i,deltat,beads),'rb')
+        f = open('/home/vgs23/Pickle_files/AQCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_NB_{}.dat'.format(N*100,beta*beads,i,T,deltat,beads),'rb')
         tcf+= pickle.load(f)
         #plt.plot(tcf_tarr,tcf,color='r')
         #plt.plot(tcf_tarr,np.cos(tcf_tarr),color='g')
@@ -125,6 +125,14 @@ if(0):
     
     tcf/=(n_instance)
     plt.plot(tcf_tarr,tcf)
+
+    tcf*=0.0
+    for i in range(n_instance):
+        f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP1.dat'.format(N*100,beta,i,T,0.5),'rb')
+        tcf += pickle.load(f)
+        f.close()
+        print(i,'completed')
+    plt.plot(tcf_tarr,tcf,color='g')
     plt.show()
 
 if(0):
@@ -150,7 +158,7 @@ if(0):
     plt.show()
 
 #------------------------------------------------------- RPMD
-if(0):
+if(1):
     #### The clumsy use of beta and beta_n interchangeably may 
     #### come back to haunt in the future. Whenever, this code is used again,
     #### it has to be ensured that the temperature terms are all alright. 

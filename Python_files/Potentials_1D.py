@@ -13,3 +13,5 @@ def potential_1D_box(x):
         else:
             return 0.0#1/(1+np.exp(k*x)) + 1/(1+np.exp(-k*(x-L)))#0.0#0.5*x**2
         
+def potential_quartic(x):
+    return 0.25*x**4
