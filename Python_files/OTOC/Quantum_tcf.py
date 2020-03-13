@@ -38,8 +38,8 @@ f2py -c --f90flags="-O3" -m OTOC_f OTOC_fortran.f90
 
 These are the command line codes to compile and wrap the relevant FORTRAN functions for computing the OTOC.
 """
-L = 3*np.pi
-N = 50
+L = 3*np.pi#1.0
+N = 20
 dx = L/N
 dy= L/N
 a = -L
@@ -85,7 +85,7 @@ OTOC for a 2D system.
 """
 
 potential_2D = Potentials_2D.potential_coupled_quartic
-pot_key = 'Stadium_billiards'#'Coupled_quartic'#'Quartic'#'Harmonic'#
+pot_key = 'Coupled_quartic'#'Quartic'#'Harmonic'#'Stadium_billiards'#
 
 if(1):
     #wf = eigenstate(vecs[:,26])
@@ -145,7 +145,7 @@ if(1):
 #------------------------------------------------
 print('time 1',time.time()-start_time)
    
-if(1):
+if(0):
     
     h5f = h5py.File("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}_Ls_{}_rc_{}_n_barrier_{}.h5".format(pot_key,N,Potentials_2D.Ls,Potentials_2D.r_c,Potentials_2D.n_barrier), 'r')
     vecs = h5f['vecs'][:]
@@ -166,7 +166,7 @@ if(1):
     plt.plot(tarr,tcf_tarr)
     plt.show()
     
-if(0):   
+if(1):   
     
     """
     This part of the code shall remain the same, even when other
@@ -238,10 +238,10 @@ if(0):
         
         if(1):
             print('vals,vecs',np.shape(vecs),np.shape(vals))
-            OTOC_arr = OTOC_f.position_matrix.compute_otoc_arr_t(vecs,x_arr,dx,dy,k_arr,vals,m_arr,t_arr,beta,n_eigen,OTOC_arr) 
+            OTOC_arr = OTOC_f.position_matrix.compute_kubo_otoc_arr_t(vecs,x_arr,dx,dy,k_arr,vals,m_arr,t_arr,beta,n_eigen,OTOC_arr) 
             #OTOC_arr = OTOC(t_arr,beta)
             print('Pot details',Potentials_2D.n_barrier,Potentials_2D.r_c)
-            f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,basis_N,n_eigen,t_final),'wb')
+            f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,basis_N,n_eigen,t_final),'wb')
             pickle.dump(t_arr,f)
             pickle.dump(OTOC_arr,f)
             f.close()
@@ -254,13 +254,21 @@ if(0):
         #ax.set_ylim([0.1,100])
         
         print('Pot details',Potentials_2D.n_barrier,Potentials_2D.r_c)
+        f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,basis_N,n_eigen,t_final),'rb')
+        t_arr = pickle.load(f)
+        OTOC_arr = pickle.load(f)
+        f.close()
+        
+        #print('OTOC_arr',OTOC_arr)
+        ax.plot(t_arr,OTOC_arr,color='b')
+        
         f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,basis_N,n_eigen,t_final),'rb')
         t_arr = pickle.load(f)
         OTOC_arr = pickle.load(f)
         f.close()
         
-        print('OTOC_arr',OTOC_arr)
-        ax.plot(t_arr,OTOC_arr,color='b')
+        #print('OTOC_arr',OTOC_arr)
+        ax.plot(t_arr,OTOC_arr,color='g')
         
         if(0):
             f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,9,Potentials_2D.r_c,beta,30,30,t_final),'rb')

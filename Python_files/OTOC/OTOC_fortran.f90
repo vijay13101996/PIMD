@@ -15,6 +15,8 @@ module position_matrix
 	public :: compute_c_mc_arr_t
 	public :: OTOC_elts
 	public :: compute_OTOC_arr_t
+	public :: Kubo_OTOC_elts
+	public :: compute_Kubo_OTOC_arr_t
 	contains
 		subroutine testing()
 			print*, "JUst cheking"
@@ -214,4 +216,64 @@ t_arr,lent,beta,n_eigen,OTOC_mat)
 				call OTOC_elts(vecs,len1vecs,len2vecs,x_arr,lenx,dx,dy,k_arr,lenk,vals_arr,lenv,m_arr,lenm,t_arr(i),beta,n_eigen,OTOC_mat(i))
 			end do
 		end subroutine compute_OTOC_arr_t
+
+		subroutine Kubo_OTOC_elts(vecs,len1vecs,len2vecs,x_arr,lenx,dx,dy,k_arr,lenk,vals_arr,lenv,m_arr,lenm,t,beta,n_eigen,OTOC_elt)
+
+			integer, intent(in) :: len1vecs,len2vecs,lenx,lenv,lenk,lenm,n_eigen			
+			real(kind=8), dimension(len1vecs,len2vecs), intent(in) :: vecs
+			real(kind=8), dimension(lenx), intent(in) :: x_arr
+			real(kind=8), intent(in) ::  dx,dy			
+			integer, dimension(lenm),intent(in) :: m_arr
+			integer, dimension(lenk), intent(in) :: k_arr
+			real(kind=8), dimension(lenv), intent(in) :: vals_arr
+			real(kind=8), intent(in) :: t,beta
+			integer :: n,m
+			!f2py real,intent(in,out,copy) :: OTOC_elt
+			real,intent(inout) :: OTOC_elt
+			real(kind=8) :: Z
+			complex(kind=8) :: b_nm
+			real, dimension(n_eigen) :: c_mc_mat
+			c_mc_mat=0.0
+			Z=0.0
+			do n=1,n_eigen
+				Z = Z + exp(-beta*vals_arr(n))
+			end do
+			do n=1,n_eigen
+				do m=1,n_eigen
+					b_nm = 0.0
+					call b_matrix_elts(vecs,len1vecs,len2vecs,x_arr,lenx,dx,dy,k_arr,lenk,vals_arr,lenv,n,m,t,b_nm)
+					!OTOC_elt = OTOC_elt + &
+					!		(1/(beta*Z*(vals_arr(m)-vals_arr(n))))*(exp(-beta*(vals_arr(n) &
+					!		-vals_arr(m)))-1)*exp(-beta*vals_arr(m))*b_nm*conjg(b_nm)
+					if(n .NE. m) then
+					OTOC_elt = OTOC_elt + (1/(Z*beta))*((exp(-beta*vals_arr(n)) - exp(-beta*vals_arr(m)))&
+							/(vals_arr(m)-vals_arr(n)))*b_nm*conjg(b_nm)
+					else
+					OTOC_elt = OTOC_elt + (1/Z)*exp(-beta*vals_arr(m))*b_nm*conjg(b_nm)
+					end if
+				end do
+			end do
+				
+		end subroutine Kubo_OTOC_elts
+
+		subroutine compute_Kubo_OTOC_arr_t(vecs,len1vecs,len2vecs,x_arr,lenx,dx,dy,k_arr,lenk,vals_arr,lenv, &
+				m_arr,lenm,t_arr,lent,beta,n_eigen,Kubo_OTOC_mat)	
+			integer, intent(in) :: len1vecs,len2vecs,lenx,lenv,lenk,lenm,lent,n_eigen			
+			real(kind=8), dimension(len1vecs,len2vecs), intent(in) :: vecs
+			real(kind=8), dimension(lenx), intent(in) :: x_arr
+			real(kind=8), intent(in) ::  dx,dy			
+			integer, dimension(lenm),intent(in) :: m_arr
+			integer, dimension(lenk), intent(in) :: k_arr
+			real(kind=8), dimension(lent), intent(in) :: t_arr
+			real(kind=8), dimension(lenv), intent(in) :: vals_arr
+			real(kind=8), intent(in) :: beta
+			integer :: i
+			!f2py real,dimension(lent),intent(in,out,copy) :: Kubo_OTOC_mat
+			real,dimension(lent),intent(inout) :: Kubo_OTOC_mat
+			print*, 'Here'
+			do i=1,lent
+				call Kubo_OTOC_elts(vecs,len1vecs,len2vecs,x_arr,lenx,dx,dy,k_arr,lenk,vals_arr,lenv&
+					,m_arr,lenm,t_arr(i),beta,n_eigen,Kubo_OTOC_mat(i))
+			end do
+		end subroutine compute_Kubo_OTOC_arr_t
 end module position_matrix
