@@ -160,7 +160,7 @@ if(0):
 #------------------------------------------------------- RPMD
 if(1):
     #### The clumsy use of beta and beta_n interchangeably may 
-    #### come back to haunt in the future. Whenever, this code is used again,
+    #### come back to haunt in the future. Whenever this code is used again,
     #### it has to be ensured that the temperature terms are all alright. 
    
     Ring_polymer_dynamics.compute_tcf(n_instance,N,beads,dpotential,beta,T,deltat)
