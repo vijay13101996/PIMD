@@ -33,7 +33,6 @@ def phase_space_average(CMD,Matsubara,M,swarmobj,derpotential,tim,deltat,rng_ind
     tarr = np.arange(0,tim+0.0001,tim/100.0)
 
     thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,10,rng)
-    #print(time.time()-start_time)
     n_approx = 1
     Quan_arr = np.zeros_like(tarr)
     
