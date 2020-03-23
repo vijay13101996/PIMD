@@ -15,7 +15,7 @@ import scipy
 #from System_potential import dpotential,potential
 from MD_Evolution import time_evolve,time_evolve_nc,time_evolve_qcmd
 from Langevin_thermostat import thermalize, qcmd_thermalize
-import psutil
+#import psutil
 
 
 def corr_function_QCMD(swarmobj,QC_q,QC_p,lambda_curr,A,B,time_corr,deltat,dpotential,rng_ind):

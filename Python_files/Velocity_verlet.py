@@ -16,7 +16,7 @@ from multiprocessing import Process
 from scipy import fftpack
 import scipy 
 import MD_System
-import psutil
+#import psutil
 #import MD_Simulation
 
 global count 

@@ -40,9 +40,35 @@ alpha = sympy.Symbol('alpha')
 V_rh = (K/2)*(r-r_c)**2
 
 V_cb = D0*(1 - exp(-alpha*(r-r_c)))**2
-print(diff(V_cb,x))
-print('new')
-print(diff(V_cb,y))
+#print(diff(V_cb,x))
+#print('new')
+#print(diff(V_cb,y))
+
+eps = sympy.Symbol('eps')
+A_s = sympy.Symbol('A_s')
+alp_s =  sympy.Symbol('alp_s')
+R =  sympy.Symbol('R')
+R_m =  sympy.Symbol('R_m')
+X = R/R_m
+beta_s =  sympy.Symbol('beta_s')
+D =  sympy.Symbol('D')
+C_6 =  sympy.Symbol('C_6')
+C_8 =  sympy.Symbol('C_8')
+C_10 = sympy.Symbol('C_10')
+
+V_HFD_T1 = eps*(A_s*exp(-alp_s*X+beta_s*X**2) - exp(-(D/X-1)**2)*(C_6/X**6 + C_8/X**8 + C_10/X**10))
+V_HFD_T2 = eps*(A_s*exp(-alp_s*X+beta_s*X**2) - (C_6/X**6 + C_8/X**8 + C_10/X**10))
+
+#print('Term 1')
+#print(diff(V_HFD_T1,R))
+#print('double_derivative')
+#print(diff(V_HFD_T1,R,R))
+
+#print('Term 2')
+#print(diff(V_HFD_T2,R))
+#print('double_derivative')
+#print(diff(V_HFD_T2,R,R))
+
 #V_lg = 1/(1+exp(s1*(r-r_c))) + 1/(1+exp(-s2*(y-y_c))) + 1/(1+exp(-s2*(x-x_c)))\
     #+ 1/(1+exp(s2*(y+y_c))) + 1/(1+exp(s2*(x+x_c)))
 
@@ -319,7 +345,6 @@ def dpotential(Q):
     ret = np.transpose(np.array([dpotx,dpoty]),(1,0,2))
     return ret
 
-
 #fig = plt.figure()
 #ax = fig.add_subplot(111, projection='3d')
 
@@ -359,7 +384,117 @@ def vector_integrate(pool,tim,init_array):
 def vector_mqq(pool,arr):
     result = pool.map(compute_monodromy_mqq, arr)
     return result
+#----------------------------------------------------------------------------------------------------- The following code is to be used for propagating Monodromy matrices for interacting systems.
+n_particles = 20
+n_dim = 3
+N = n_particles*n_dim
+m=4.0  #Has to be changed; It is very risky to define it as a global variable.
+D=1.4135
+A_s = 1.9221529e5 
+beta_s = -1.89296514
+R_m = 0.2970*18.897259885789
+C_6= 1.34920045
+C_8= 0.41365922
+C_10= 0.17078164
+alp_s = 10.73520708
+eps = 10.94*0.31668115634e-5   #k_B = 0.31668115634e-5 a.u./K   # 1/k_B = 315775.02481 in atomic units (a.u./K)
+
+
+def system_definition(n_p,n_d):
+    global n_particles,n_dim,N
+    n_particles = n_p
+    n_dim = n_d
+    N = n_particles*n_dim
+    print('Now, n_particles, n_dim = ', n_particles,n_dim)
+
+def func(y,t): 
+    global m
+    q = y[:N].reshape(n_particles,n_dim)
+    p = y[N:2*N].reshape(n_particles,n_dim)
+    n_mmat = n_particles*n_dim*n_dim
+    Mpp = y[2*N:2*N+n_mmat].reshape(n_particles,n_dim,n_dim)
+    Mpq = y[2*N+n_mmat:2*N+2*n_mmat].reshape(n_particles,n_dim,n_dim)
+    Mqp = y[2*N+2*n_mmat:2*N+3*n_mmat].reshape(n_particles,n_dim,n_dim)
+    Mqq = y[2*N+3*n_mmat:2*N+4*n_mmat].reshape(n_particles,n_dim,n_dim)
+    dd_mpp = -np.matmul(ddpotential(q),Mqp)
+    dd_mpq = -np.matmul(ddpotential(q),Mqq)
+    #print(q,p)
+    dydt = np.concatenate((p.flatten(),-force_dpotential(q).flatten(),dd_mpp.flatten(),dd_mpq.flatten(),Mpp.flatten()/m, Mpq.flatten()/m  ))
+    return dydt
+
+def scalar_dpotential(R):
+    #return 2*R*np.exp(-R**2)# 1/R**2#2*R*np.exp(-R**2)
+    #print('D',D)
+    if(1):
+        if(R<=D):
+            ret = eps*(A_s*(2*R*beta_s/R_m**2 - alp_s/R_m)*exp(R**2*beta_s/R_m**2 - R*alp_s/R_m) + 2*D*R_m*(D*R_m/R - 1)*(-C_10*R_m**10/R**10 - C_6*R_m**6/R**6 - C_8*R_m**8/R**8)*exp(-(D*R_m/R - 1)**2)/R**2                 + (10*C_10*R_m**10/R**11 + 6*C_6*R_m**6/R**7 + 8*C_8*R_m**8/R**9)*exp(-(D*R_m/R - 1)**2))
+            #print('ret',ret)
+            return float(ret)
+        else:
+            ret = eps*(A_s*(2*R*beta_s/R_m**2 - alp_s/R_m)*exp(R**2*beta_s/R_m**2 - R*alp_s/R_m) + 10*C_10*R_m**10/R**11 + 6*C_6*R_m**6/R**7 + 8*C_8*R_m**8/R**9)
+            #print('ret',ret)
+            return float(ret) 
+
+def scalar_ddpotential(R):
+    #return (2-4*R**2)*np.exp(-R**2)
+    if(R<=D):
+        ret= eps*(2*A_s*beta_s*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 + A_s*(2*R*beta_s/R_m - alp_s)**2*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 - 4*D**2*R_m**8*(D*R_m/R - 1)**2*(C_10*R_m**4/R**4 + C_6 + C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**10 + 2*D**2*R_m**8*(C_10*R_m**4/R**4 + C_6 + C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**10 + 4*D*R_m**7*(D*R_m/R - 1)*(C_10*R_m**4/R**4 + C_6 + C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**9 + 8*D*R_m**7*(D*R_m/R - 1)*(5*C_10*R_m**4/R**4 + 3*C_6 + 4*C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**9 - 2*R_m**6*(55*C_10*R_m**4/R**4 + 21*C_6 + 36*C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**8)
+        return float(ret)
+    else:
+        ret= -eps*(-2*A_s*beta_s*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 - A_s*(2*R*beta_s/R_m - alp_s)**2*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 + 110*C_10*R_m**10/R**12 + 42*C_6*R_m**6/R**8 + 72*C_8*R_m**8/R**10)
+        return float(ret)
+
+def force_dpotential(q):
+    #print('Here')
+    dpotential = np.zeros_like(q)
+    for i in range(len(q)):
+        for j in range(len(q)):
+            if(i!=j):
+                R = np.sum((q[i]-q[j])**2)**0.5
+                unit = (q[i]-q[j])/R
+                #print('hereh',scalar_dpotential(R))
+                dpotential[i]+= scalar_dpotential(R)*unit
+
+    return dpotential
+
         
+def vector_ddpotential(R_vector,R):
+    ret = R**2*np.identity(n_dim) - np.outer(R_vector,R_vector)
+    ret*=(1/R**3)
+    return ret 
+
+def ddpotential(q):
+    ddpotential = np.zeros((n_particles,n_dim,n_dim))
+    for i in range(n_particles):
+        for j in range(n_particles):
+            if(i!=j): 
+                R_vector = q[i]-q[j]
+                R = np.sum((R_vector)**2)**0.5
+                unit = R_vector/R
+                ddpotential[i]+= scalar_ddpotential(R)*np.outer(unit,unit) + scalar_dpotential(R)*vector_ddpotential(R_vector,R)
+    return ddpotential
+
+def ode_instance(q,p,tarr):
+    print('Defining ODE instance with n_particles,n_dim',n_particles,n_dim)
+    Mpp= np.zeros((n_particles,n_dim,n_dim))
+    Mpq= np.zeros_like(Mpp)
+    Mqp= np.zeros_like(Mpp)
+    Mqq= np.zeros_like(Mpp)
+
+    Mpp = np.array([np.identity(n_dim) for i in range(n_particles)])
+    Mqq = Mpp.copy()
+    y0=np.concatenate((q.flatten(), p.flatten(),Mpp.flatten(),Mpq.flatten(),Mqp.flatten(),Mqq.flatten() ))
+    #print(y0)
+    sol = scipy.integrate.odeint(func,y0,tarr)
+
+    return sol
+
+def detmqq(sol):
+    n_mmat = n_particles*n_dim**2
+    sol_mqq = sol[:,2*N+3*n_mmat:2*N+4*n_mmat].reshape(len(sol),n_particles,n_dim,n_dim)
+    #print('determinant',np.linalg.det(sol_mqq))
+    print('mqq',np.shape(sol_mqq))
+    return np.linalg.det(sol_mqq)
 
 #-------------------------------------------------------------
 #temp =integrate(40.0,[0.5661284083880359, 0.2435087008868868, 1.8554349125204095, 0.9124931713411446,1,0,0,1,0,0,0,0,0,0,0,0,1,0,0,1] )

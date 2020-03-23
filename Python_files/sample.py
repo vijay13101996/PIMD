@@ -150,18 +150,20 @@ B = np.array([1,2,3])
 #A = 0.0
 #print(np.shape(A))
 
-
-import h5py
+if(0):
+    import h5py
 #a = np.random.random(size=(100,20))
-h5f = h5py.File('data.h5', 'w')
-h5f.create_dataset('A',data=A)
-h5f.create_dataset('B',data=B)
-h5f.close()
 
-h5f = h5py.File('data.h5','r')
-A = h5f['A'][:]
-B=  h5f['B'][:]
-h5f.close()
+
+    h5f = h5py.File('data.h5', 'w')
+    h5f.create_dataset('A',data=A)
+    h5f.create_dataset('B',data=B)
+    h5f.close()
+
+    h5f = h5py.File('data.h5','r')
+    A = h5f['A'][:]
+    B=  h5f['B'][:]
+    h5f.close()
 
 print('b',B,'A',A)
 
@@ -176,5 +178,31 @@ print('b',B,'A',A)
 #print(B[rearr])
 #print(A*B)
 #print(np.sum(A*B,axis=1))
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
+fig, ax = plt.subplots()
+xdata, ydata = [], []
+ln, = plt.plot([], [], 'ro')
+
+def init():
+    ax.set_xlim(-1,1)# 2*np.pi)
+    ax.set_ylim(-1,1)
+    return ln,
+
+theta = np.linspace(0,2*np.pi,100)
+X = np.cos(theta)
+Y = np.sin(theta)
+
+def update(frame):    
+    xdata = X*frame
+    ydata = Y*frame#(np.sin(frame))
+    ln.set_data(xdata, ydata)
+    print(xdata)
+    return ln,
+
+ani = FuncAnimation(fig, update, frames=np.arange(0, 1, 0.1),
+                    init_func=init, blit=True)
+plt.show()
 
