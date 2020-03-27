@@ -72,20 +72,6 @@ def force_dpotential(q):
 
 def vector_ddpotential(R_vector,R):
     ret = R**2*np.identity(n_dim) - np.outer(R_vector,R_vector)
-    #print('ret1',ret)
-    if(0):
-        x,y,z = R_vector
-        ret = np.zeros((n_dim,n_dim))
-        ret[0][0] = y**2+z**2
-        ret[0][1] = -x*y
-        ret[0][2] = -x*z
-        ret[1][0] = -x*y
-        ret[1][1] = x**2 + z**2
-        ret[1][2] = -y*z
-        ret[2][0] = -x*z
-        ret[2][1] = -y*z
-        ret[2][2] = x**2+y**2
-        print('ret2',ret)
     ret*=(1/R**3)
     return ret 
 

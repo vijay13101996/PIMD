@@ -17,6 +17,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import multiprocessing as mp
 from functools import partial
 import time
+import cProfile
 start_time = time.time()
 #-----------------------------------------------------------------
 x = sympy.Symbol('x')
@@ -399,6 +400,11 @@ C_10= 0.17078164
 alp_s = 10.73520708
 eps = 10.94*0.31668115634e-5   #k_B = 0.31668115634e-5 a.u./K   # 1/k_B = 315775.02481 in atomic units (a.u./K)
 
+import Liquid_Helium_potential
+dpotential_He = Liquid_Helium_potential.liquid_helium_potential.dpotential
+vddpotential_He = Liquid_Helium_potential.liquid_helium_potential.vector_ddpotential
+ddpotential_He =  Liquid_Helium_potential.liquid_helium_potential.ddpotential 
+Liquid_Helium_potential.liquid_helium_potential.assign_pot_params()
 
 def system_definition(n_p,n_d):
     global n_particles,n_dim,N
@@ -416,16 +422,17 @@ def func(y,t):
     Mpq = y[2*N+n_mmat:2*N+2*n_mmat].reshape(n_particles,n_dim,n_dim)
     Mqp = y[2*N+2*n_mmat:2*N+3*n_mmat].reshape(n_particles,n_dim,n_dim)
     Mqq = y[2*N+3*n_mmat:2*N+4*n_mmat].reshape(n_particles,n_dim,n_dim)
-    dd_mpp = -np.matmul(ddpotential(q),Mqp)
-    dd_mpq = -np.matmul(ddpotential(q),Mqq)
+    dd_mpp = -np.matmul(ddpotential_He(q),Mqp)
+    dd_mpq = -np.matmul(ddpotential_He(q),Mqq)
     #print(q,p)
-    dydt = np.concatenate((p.flatten(),-force_dpotential(q).flatten(),dd_mpp.flatten(),dd_mpq.flatten(),Mpp.flatten()/m, Mpq.flatten()/m  ))
+    dydt = np.concatenate((p.flatten(),-dpotential_He(q).flatten(),dd_mpp.flatten(),dd_mpq.flatten(),Mpp.flatten()/m, Mpq.flatten()/m  ))
+    
     return dydt
 
 def scalar_dpotential(R):
-    #return 2*R*np.exp(-R**2)# 1/R**2#2*R*np.exp(-R**2)
+    return 2*R*np.exp(-R**2)# 1/R**2#2*R*np.exp(-R**2)
     #print('D',D)
-    if(1):
+    if(0):
         if(R<=D):
             ret = eps*(A_s*(2*R*beta_s/R_m**2 - alp_s/R_m)*exp(R**2*beta_s/R_m**2 - R*alp_s/R_m) + 2*D*R_m*(D*R_m/R - 1)*(-C_10*R_m**10/R**10 - C_6*R_m**6/R**6 - C_8*R_m**8/R**8)*exp(-(D*R_m/R - 1)**2)/R**2                 + (10*C_10*R_m**10/R**11 + 6*C_6*R_m**6/R**7 + 8*C_8*R_m**8/R**9)*exp(-(D*R_m/R - 1)**2))
             #print('ret',ret)
@@ -436,13 +443,14 @@ def scalar_dpotential(R):
             return float(ret) 
 
 def scalar_ddpotential(R):
-    #return (2-4*R**2)*np.exp(-R**2)
-    if(R<=D):
-        ret= eps*(2*A_s*beta_s*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 + A_s*(2*R*beta_s/R_m - alp_s)**2*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 - 4*D**2*R_m**8*(D*R_m/R - 1)**2*(C_10*R_m**4/R**4 + C_6 + C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**10 + 2*D**2*R_m**8*(C_10*R_m**4/R**4 + C_6 + C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**10 + 4*D*R_m**7*(D*R_m/R - 1)*(C_10*R_m**4/R**4 + C_6 + C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**9 + 8*D*R_m**7*(D*R_m/R - 1)*(5*C_10*R_m**4/R**4 + 3*C_6 + 4*C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**9 - 2*R_m**6*(55*C_10*R_m**4/R**4 + 21*C_6 + 36*C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**8)
-        return float(ret)
-    else:
-        ret= -eps*(-2*A_s*beta_s*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 - A_s*(2*R*beta_s/R_m - alp_s)**2*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 + 110*C_10*R_m**10/R**12 + 42*C_6*R_m**6/R**8 + 72*C_8*R_m**8/R**10)
-        return float(ret)
+    return (2-4*R**2)*np.exp(-R**2)
+    if(0):
+        if(R<=D):
+            ret= eps*(2*A_s*beta_s*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 + A_s*(2*R*beta_s/R_m - alp_s)**2*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 - 4*D**2*R_m**8*(D*R_m/R - 1)**2*(C_10*R_m**4/R**4 + C_6 + C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**10 + 2*D**2*R_m**8*(C_10*R_m**4/R**4 + C_6 + C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**10 + 4*D*R_m**7*(D*R_m/R - 1)*(C_10*R_m**4/R**4 + C_6 + C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**9 + 8*D*R_m**7*(D*R_m/R - 1)*(5*C_10*R_m**4/R**4 + 3*C_6 + 4*C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**9 - 2*R_m**6*(55*C_10*R_m**4/R**4 + 21*C_6 + 36*C_8*R_m**2/R**2)*exp(-(D*R_m/R - 1)**2)/R**8)
+            return float(ret)
+        else:
+            ret= -eps*(-2*A_s*beta_s*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 - A_s*(2*R*beta_s/R_m - alp_s)**2*exp(R*(R*beta_s/R_m - alp_s)/R_m)/R_m**2 + 110*C_10*R_m**10/R**12 + 42*C_6*R_m**6/R**8 + 72*C_8*R_m**8/R**10)
+            return float(ret)
 
 def force_dpotential(q):
     #print('Here')
@@ -451,15 +459,18 @@ def force_dpotential(q):
         for j in range(len(q)):
             if(i!=j):
                 R = np.sum((q[i]-q[j])**2)**0.5
+                #print('R py', R)
                 unit = (q[i]-q[j])/R
                 #print('hereh',scalar_dpotential(R))
                 dpotential[i]+= scalar_dpotential(R)*unit
 
     return dpotential
 
-        
+def dpotential_He_aux(q):
+    return dpotential_He(q)[:,:,np.newaxis]
+
 def vector_ddpotential(R_vector,R):
-    ret = R**2*np.identity(n_dim) - np.outer(R_vector,R_vector)
+    ret = R**2*np.identity(n_dim) - (np.einsum('i,j->ij', R_vector.ravel(), R_vector.ravel())) # np.outer(R_vector,R_vector)
     ret*=(1/R**3)
     return ret 
 
@@ -471,7 +482,7 @@ def ddpotential(q):
                 R_vector = q[i]-q[j]
                 R = np.sum((R_vector)**2)**0.5
                 unit = R_vector/R
-                ddpotential[i]+= scalar_ddpotential(R)*np.outer(unit,unit) + scalar_dpotential(R)*vector_ddpotential(R_vector,R)
+                ddpotential[i]+= scalar_ddpotential(R)*(np.einsum('i,j->ij', unit.ravel(), unit.ravel())) + scalar_dpotential(R)*vector_ddpotential(R_vector,R)##np.outer(unit,unit) 
     return ddpotential
 
 def ode_instance(q,p,tarr):
@@ -485,8 +496,8 @@ def ode_instance(q,p,tarr):
     Mqq = Mpp.copy()
     y0=np.concatenate((q.flatten(), p.flatten(),Mpp.flatten(),Mpq.flatten(),Mqp.flatten(),Mqq.flatten() ))
     #print(y0)
-    sol = scipy.integrate.odeint(func,y0,tarr)
-
+    sol = scipy.integrate.odeint(func,y0,tarr,mxstep=100000)
+    print(sol[len(tarr)-1,:10])
     return sol
 
 def detmqq(sol):
@@ -495,6 +506,20 @@ def detmqq(sol):
     #print('determinant',np.linalg.det(sol_mqq))
     print('mqq',np.shape(sol_mqq))
     return np.linalg.det(sol_mqq)
+
+#rng = np.random.RandomState(1)
+#q = rng.rand(n_particles,n_dim)
+#p = rng.normal(0,1,(n_particles,n_dim)) #np.zeros_like(q)
+#tarr = np.linspace(0,1,20)
+print('changed')
+#print('compare',scalar_dpotential(4.1),Liquid_Helium_potential.liquid_helium_potential.scalar_dpotential(4.1))
+#print('compare',force_dpotential(q),Liquid_Helium_potential.liquid_helium_potential.dpotential(q))
+#print('compare',vector_ddpotential(np.array([1.1,2.5,3.9]),1.9), vddpotential_He(np.array([1.1,2.5,3.9]),1.9))
+#print('compare',ddpotential(q), ddpotential_He(q))
+
+#print('FORTRAN')
+#ode_instance(q,p,tarr)
+#cProfile.run('ode_instance(q,p,tarr)')
 
 #-------------------------------------------------------------
 #temp =integrate(40.0,[0.5661284083880359, 0.2435087008868868, 1.8554349125204095, 0.9124931713411446,1,0,0,1,0,0,0,0,0,0,0,0,1,0,0,1] )

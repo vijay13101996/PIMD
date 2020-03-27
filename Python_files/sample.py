@@ -178,31 +178,54 @@ print('b',B,'A',A)
 #print(B[rearr])
 #print(A*B)
 #print(np.sum(A*B,axis=1))
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+if(0):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation
 
-fig, ax = plt.subplots()
-xdata, ydata = [], []
-ln, = plt.plot([], [], 'ro')
+    fig, ax = plt.subplots()
+    xdata, ydata = [], []
+    ln, = plt.plot([], [], 'ro')
 
-def init():
-    ax.set_xlim(-1,1)# 2*np.pi)
-    ax.set_ylim(-1,1)
-    return ln,
+    def init():
+        ax.set_xlim(-1,1)# 2*np.pi)
+        ax.set_ylim(-1,1)
+        return ln,
 
-theta = np.linspace(0,2*np.pi,100)
-X = np.cos(theta)
-Y = np.sin(theta)
+    theta = np.linspace(0,2*np.pi,100)
+    X = np.cos(theta)
+    Y = np.sin(theta)
 
-def update(frame):    
-    xdata = X*frame
-    ydata = Y*frame#(np.sin(frame))
-    ln.set_data(xdata, ydata)
-    print(xdata)
-    return ln,
+    def update(frame):    
+        xdata = X*frame
+        ydata = Y*frame#(np.sin(frame))
+        ln.set_data(xdata, ydata)
+        print(xdata)
+        return ln,
 
-ani = FuncAnimation(fig, update, frames=np.arange(0, 1, 0.1),
-                    init_func=init, blit=True)
-plt.show()
+    ani = FuncAnimation(fig, update, frames=np.arange(0, 1, 0.1),
+                        init_func=init, blit=True)
+    plt.show()
+
+from scipy.integrate import odeint,ode
+import scipy
+import sys
+sys.path.insert(1,'/home/vgs23/Python_files/')
+#from Int_func_sample.integration_function import f
+import Int_func_mod
+f = Int_func_mod.integration_function.f
+
+def func(y,t):
+    dydt = np.zeros_like(y)
+    dydt = f(y,t,dydt)
+    return dydt
+
+def fu(y,t):
+    x,px = y
+    return np.array([px,-x])
+
+y0 = np.array([0.0,1.0])
+sol = scipy.integrate.odeint(fu,y0,[0,np.pi/4])
+print('sol',sol[1,0])
+
 

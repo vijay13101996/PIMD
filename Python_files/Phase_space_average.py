@@ -26,18 +26,19 @@ start_time = time.time()
 from MD_Evolution import time_evolve
 from Langevin_thermostat import thermalize
 import Monodromy
-
+import cProfile
+import imp
 
 def phase_space_average(CMD,Matsubara,M,swarmobj,derpotential,tim,deltat,rng_ind):
     rng = np.random.RandomState(rng_ind)
     tarr = np.arange(0,tim+0.0001,tim/100.0)
 
-    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,10,rng)
+    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,100,rng)
     n_approx = 1
     Quan_arr = np.zeros_like(tarr)
     print('thermalized')
-    plt.scatter(swarmobj.q[:,0],swarmobj.q[:,1])
-    plt.show()
+    #plt.scatter(swarmobj.q[:,0],swarmobj.q[:,1])
+    #plt.show()
     if(0):
         for j in range(n_approx):
             traj_data = Monodromy.Integration_instance(swarmobj.q,swarmobj.p)
@@ -48,7 +49,7 @@ def phase_space_average(CMD,Matsubara,M,swarmobj,derpotential,tim,deltat,rng_ind
                 Quan_arr[i]+= np.sum(Monodromy.vector_mqq(pool,traj_data))
             pool.close()
             pool.join()
-            thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,4,rng)
+            #thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,4,rng)
             print(time.time()-start_time)
         Quan_arr/=(n_approx*swarmobj.N)
 
@@ -56,15 +57,15 @@ def phase_space_average(CMD,Matsubara,M,swarmobj,derpotential,tim,deltat,rng_ind
         traj_arr = Monodromy.ode_instance(swarmobj.q,swarmobj.p,tarr)
         Quan_arr+= np.sum(Monodromy.detmqq(traj_arr),axis=1)
         thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,10,rng)
-
+    
     return Quan_arr
 
-N=10
+N=20
 dim = 3
 deltat=1e-2
 swarmobject = MD_System.swarm(N)
-MD_System.system_definition(1.0,1,3,MD_System.dpotential)
-importlib.reload(Velocity_verlet)
+MD_System.system_definition(78943.7562025,1,dim,MD_System.dpotential)
+imp.reload(Velocity_verlet)
 Monodromy.system_definition(N,dim)
 
 
@@ -75,10 +76,11 @@ swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/(MD_System.beta),np.shape(sw
 Matsubara = 0
 CMD=0
 M=0
-T =5.0    
-Marr =phase_space_average(CMD,Matsubara,M,swarmobject,Monodromy.force_dpotential,T,deltat,1)
-
+T =10.0    
+Marr =phase_space_average(CMD,Matsubara,M,swarmobject,Monodromy.dpotential_He_aux,T,deltat,1)
+#cProfile.run('phase_space_average(CMD,Matsubara,M,swarmobject,Monodromy.force_dpotential,T,deltat,1)')
 tarr = np.arange(0,T+0.0001,T/100.0)
-print('here')
-plt.plot(tarr,np.log(abs(Marr)**2))
+print('Time taken:',time.time()-start_time)
+fig = plt.figure(1)
+plt.plot(tarr,2*np.log(abs(Marr)))
 plt.show()
