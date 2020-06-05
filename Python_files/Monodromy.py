@@ -89,6 +89,11 @@ V_HFD_T2 = eps*(A_s*exp(-alp_s*X+beta_s*X**2) - (C_6/X**6 + C_8/X**8 + C_10/X**1
 #             
 ##V_sb = 1/(1+exp(-s*(r-r_c)))
 #V= V_lg_m
+b = sympy.Symbol('b')
+V_cq = (b/4)*(x**4+y**4) + 0.5*x**2*y**2
+V=V_cq
+
+V = 0.5*(x**2 + y**2) + x*y
 #print(V)
 #print('\n')
 #print(diff(V,x))
@@ -104,9 +109,52 @@ V_HFD_T2 = eps*(A_s*exp(-alp_s*X+beta_s*X**2) - (C_6/X**6 + C_8/X**8 + C_10/X**1
 #print(diff(V,y,y))
 
 #---------------------------------------------------------------
-pot_code = 'V_sb'
+
+pot_code = 'V_cq'
 
 global potential, dxpotential, dypotential, ddpotential1, ddpotential2, ddpotential3, ddpotential4
+
+b = 0.1
+def potential(x,y):
+    global b
+    return (b/4.0)*(x**4+y**4) + 0.5*x**2*y**2
+
+def dpotential_coupled_quartic(q):
+    global b
+    x = q[...,0]
+    y = q[...,1]
+    dpotx = b*x**3 + 1.0*x*y**2
+    dpoty = b*y**3 + 1.0*x**2*y
+    
+    ret = np.array([dpotx,dpoty])
+    ret = np.transpose(ret, (1,2,0))
+    return ret
+
+def dpotential_cq_vv(Q):
+    global b
+    x = Q[:,0,...]
+    y = Q[:,1,...]
+    dpotx = b*x**3 + 1.0*x*y**2
+    dpoty = b*y**3 + 1.0*x**2*y
+    
+    ret = np.array([dpotx,dpoty])
+    ret = np.transpose(ret, (1,0,2))
+    return ret
+
+def ddpotential_coupled_quartic(q):
+    global b
+    x = q[...,0]
+    y = q[...,1]
+    oa = np.ones_like(x)
+    ddpot1 = 3*b*x**2 + 1.0*y**2
+    ddpot2 = 2.0*x*y
+    ddpot3 = 2.0*x*y
+    ddpot4 = 3*b*y**2 + 1.0*x**2
+
+    ret = np.array([[ddpot1,ddpot2],[ddpot3,ddpot4]]) 
+    ret = np.transpose(ret,(2,3,1,0))
+    #print(ret)
+    return ret
 
 if(pot_code == 'V_hh'):
     print('here')
@@ -520,7 +568,139 @@ print('changed')
 #print('FORTRAN')
 #ode_instance(q,p,tarr)
 #cProfile.run('ode_instance(q,p,tarr)')
+#-------------------------------------------------------------
+m=1.0
+n_particles = 100
+n_dim =2 
+n_beads= 4
+w_n = n_beads
+id_mat =  np.array([[np.identity(n_dim) for i in range(n_beads)] for j in range(n_particles)])
 
+def system_definition_RP(n_p,n_d,n_b,omega_n):
+    global n_particles,n_dim,n_beads,w_n,id_mat
+    n_particles = n_p
+    n_dim = n_d
+    n_beads = n_b
+    w_n = omega_n
+
+    id_mat =  np.array([[np.identity(n_dim) for i in range(n_beads)] for j in range(n_particles)])
+
+def dpotential_c(q):
+    return np.sum(dpotential_coupled_quartic(q),axis=1)/n_beads**0.5
+
+def ddpotential_c(q):
+    return np.sum(ddpotential_coupled_quartic(q),axis=1)/n_beads#**2
+
+def ddpotential_ring(q):
+    global m,w_n
+    if(n_beads==1):
+        return np.zeros((n_particles,n_beads,n_dim,n_dim))
+    else:
+        return 2*m*w_n**2*id_mat
+
+def dpotential_ring(q):
+    global m,w_n
+    return m*w_n**2*(2*q - np.roll(q,1,axis=1) - np.roll(q,-1,axis=1))
+
+def func_RP(y,t): 
+    global m,n_particles,n_beads,n_dim
+    N = n_particles*n_beads*n_dim
+    q = y[:N].reshape(n_particles,n_beads,n_dim)
+    p = y[N:2*N].reshape(n_particles,n_beads,n_dim)
+    n_mmat = n_particles*n_dim*n_dim*n_beads
+    Mpp = y[2*N:2*N+n_mmat].reshape(n_particles,n_beads,n_dim,n_dim)
+    Mpq = y[2*N+n_mmat:2*N+2*n_mmat].reshape(n_particles,n_beads,n_dim,n_dim)
+    Mqp = y[2*N+2*n_mmat:2*N+3*n_mmat].reshape(n_particles,n_beads,n_dim,n_dim)
+    Mqq = y[2*N+3*n_mmat:2*N+4*n_mmat].reshape(n_particles,n_beads,n_dim,n_dim)
+    dd_mpp = -np.matmul(ddpotential_coupled_quartic(q)+ddpotential_ring(q),Mqp)
+    dd_mpq = -np.matmul(ddpotential_coupled_quartic(q)+ddpotential_ring(q),Mqq)
+    
+    n_RP_coord = 2*N+4*n_mmat
+    N_c = n_particles*n_dim
+    Q_c = y[n_RP_coord: n_RP_coord+N_c].reshape(n_particles,n_dim)
+    P_c = y[n_RP_coord+N_c: n_RP_coord+2*N_c].reshape(n_particles,n_dim)
+    n_mmat_c = n_particles*n_dim*n_dim
+    Mpp_c = y[n_RP_coord+2*N_c:n_RP_coord+2*N_c+n_mmat_c].reshape(n_particles,n_dim,n_dim)
+    Mpq_c = y[n_RP_coord+2*N_c+n_mmat_c:n_RP_coord+2*N_c+2*n_mmat_c].reshape(n_particles,n_dim,n_dim)
+    Mqp_c = y[n_RP_coord+2*N_c+2*n_mmat_c:n_RP_coord+2*N_c+3*n_mmat_c].reshape(n_particles,n_dim,n_dim)
+    Mqq_c = y[n_RP_coord+2*N_c+3*n_mmat_c:n_RP_coord+2*N_c+4*n_mmat_c].reshape(n_particles,n_dim,n_dim)
+    dd_mpp_c = -np.matmul(ddpotential_c(q),Mqp_c)
+    dd_mpq_c = -np.matmul(ddpotential_c(q),Mqq_c)
+    
+    
+    #print('dd_mpp',np.shape(dd_mpp))
+    dycdt = np.concatenate((P_c.flatten(),-dpotential_c(q).flatten(),dd_mpp_c.flatten(),dd_mpq_c.flatten(),Mpp_c.flatten()/m,Mpq_c.flatten()/m))
+    dydt = np.concatenate((p.flatten(),-(dpotential_coupled_quartic(q)+dpotential_ring(q)).flatten(),dd_mpp.flatten(),dd_mpq.flatten(),Mpp.flatten()/m, Mpq.flatten()/m  ))
+    dYdt = np.concatenate((dydt,dycdt))
+    #print('dYdt',len(dYdt))
+    #print('No error until here',dd_mpp.dtype)
+    return dYdt
+
+def ode_instance_RP(q,p,tarr):
+    print('Defining ODE instance with n_particles,n_dim,n_beads ',n_particles,n_dim,n_beads)
+    Mpp= np.zeros((n_particles,n_beads,n_dim,n_dim))
+    Mpq= np.zeros_like(Mpp)
+    Mqp= np.zeros_like(Mpp)
+    Mqq= np.zeros_like(Mpp)
+
+    Mpp = np.array([[np.identity(n_dim) for i in range(n_beads)] for j in range(n_particles)])
+    Mqq = Mpp.copy()
+    #print('Mpp',Mpp)
+    Q_c = np.mean(q,axis=1)
+    P_c = np.mean(p,axis=1)
+
+    Mpp_c= np.zeros((n_particles,n_dim,n_dim))
+    Mpq_c= np.zeros_like(Mpp_c)
+    Mqp_c= np.zeros_like(Mpp_c)
+    Mqq_c= np.zeros_like(Mpp_c)
+    
+    Mpp_c = np.array([np.identity(n_dim) for i in range(n_particles)])
+    Mqq_c = Mpp_c.copy()
+    #print('Mqq_c',np.shape(Mqq_c))
+    y0=np.concatenate((q.flatten(), p.flatten(),Mpp.flatten(),Mpq.flatten(),Mqp.flatten(),Mqq.flatten(),Q_c.flatten(),P_c.flatten(),Mpp_c.flatten(),Mpq_c.flatten(),Mqp_c.flatten(),Mqq_c.flatten()  ))
+    #print('y0',len(y0))
+    sol = scipy.integrate.odeint(func_RP,y0,tarr,mxstep=100000)
+    print(sol[len(tarr)-1,:10])
+    return sol
+
+
+def detmqq_RP(sol):
+    global n_particles,n_beads,n_dim
+    n_mmat = n_particles*n_beads*n_dim**2
+    N = n_particles*n_beads*n_dim
+    n_RP_coord = 2*N+4*n_mmat
+    N_c = n_particles*n_dim
+    n_mmat_c = n_particles*n_dim*n_dim
+    sol_mqq = sol[:,n_RP_coord+2*N_c+3*n_mmat_c:n_RP_coord+2*N_c+4*n_mmat_c].reshape(len(sol),n_particles,n_dim,n_dim)
+    print('mqq',np.shape(sol_mqq))
+    return np.linalg.det(sol_mqq)
+    
+def q_RP(sol):
+    global n_particles, n_beads, n_dim
+    n_mmat = n_particles*n_beads*n_dim**2
+    N = n_particles*n_beads*n_dim
+    n_RP_coord = 2*N+4*n_mmat
+    N_c = n_particles*n_dim
+    n_mmat_c = n_particles*n_dim*n_dim
+    sol_q = sol[:,:N].reshape(len(sol),n_particles,n_beads,n_dim)
+    print('q',np.shape(sol_q))
+    return sol_q
+
+
+
+
+if(0):
+    rng = np.random.RandomState(1)
+    q = np.zeros((n_particles,n_beads,n_dim))
+    p = rng.rand(n_particles,n_beads,n_dim)
+    tarr = np.linspace(0,20,100)
+
+    #print(np.shape(ddpotential_coupled_quartic(q)))
+
+    sol = ode_instance_RP(q,p,tarr)
+    plt.plot(tarr,np.mean(abs(detmqq_RP(sol)),axis=1))
+    plt.show()
+    #print(np.shape(dpotential_cq_vv(q)))
 #-------------------------------------------------------------
 #temp =integrate(40.0,[0.5661284083880359, 0.2435087008868868, 1.8554349125204095, 0.9124931713411446,1,0,0,1,0,0,0,0,0,0,0,0,1,0,0,1] )
 

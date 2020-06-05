@@ -26,10 +26,10 @@ def corr_function_QCMD(swarmobj,QC_q,QC_p,lambda_curr,A,B,time_corr,deltat,dpote
     A_arr = np.zeros((len(tcf_taux),)+QC_q.shape)
     B_arr = np.zeros_like(A_arr)
     n_approx = 5
-    qcmd_thermalize(0,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,1000,rng)
+    qcmd_thermalize(0,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,200,rng)
     kin_en = swarmobj.sys_kin()
-    #print('kin en', kin_en)
-    #print('kin_en qc',np.sum(QC_p*QC_p)/(2*swarmobj.m))
+    print('kin en', kin_en)
+    print('kin_en qc',np.sum(QC_p*QC_p)/(2*swarmobj.m))
     qcx=[]#QC_q[:,0]
     qcy=[]#QC_q[:,1]
     
@@ -105,7 +105,7 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
     A_arr = np.zeros((len(tcf_taux),)+swarmobj.q.shape)
     B_arr = np.zeros_like(A_arr)
 
-    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,20,rng)
+    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,1000,rng)
     n_approx = 10
     print('kin en',swarmobj.sys_kin())
     #print('time_corr',time_corr)
@@ -137,9 +137,9 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
 #                #print(A_arr[i+j]*B_arr[j] + B_arr[i+j]*A_arr[j])
 #                tcf[i] += np.sum(A_centroid[i+k]*B_centroid[k] + B_centroid[i+k]*A_centroid[k]) 
     #tcf[i] += np.sum(A_0*B_t)
-        thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,5,rng)
-    tcf/=(n_approx*swarmobj.N*len(tcf)*MD_System.dimension)
-
+        thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,500,rng)
+    tcf/=(n_approx*swarmobj.N*len(tcf))#*MD_System.dimension)
+    #!!! It is unclear if the TCF is to be scaled by dimension. Beware when you make any changes above.
     return tcf
 
 def rearrangearr(M):

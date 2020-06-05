@@ -24,12 +24,15 @@ count =0
 
 w_arr = MD_System.w_arr[1:]
 w_arr_scaled = MD_System.w_arr_scaled[1:]
-print('w_arr',len(w_arr))
+print('w_arr vv',len(w_arr),w_arr)
 print('w_arr_scaled',len(w_arr_scaled))
 cosw_arr = None 
 sinw_arr = None 
-ft_rearrange= np.ones(MD_System.n_beads)*(-(2/MD_System.n_beads)**0.5)
+ft_rearrange= np.ones(MD_System.n_beads)*(-(2.0/MD_System.n_beads)**0.5)
 ft_rearrange[0] = 1/MD_System.n_beads**0.5
+
+print('ft_rearrange',ft_rearrange)
+
 if(MD_System.n_beads%2 == 0):
     ft_rearrange[MD_System.n_beads-1]= 1/MD_System.n_beads**0.5
 #~ Find a better way to define the cosines and sines.
@@ -300,10 +303,10 @@ def vv_step_constrained(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,ad
     
     #plt.plot(swarmobj.q[0][0],swarmobj.q[0][1])
     #plt.scatter(swarmobj.q[0][0],swarmobj.q[0][1])
-    x_c = np.mean(swarmobj.q[0][0])
-    y_c = np.mean(swarmobj.q[0][1])
-    radius = (QC_q[0][0]**2 + QC_q[0][1]**2)**0.5
-    theta_arr = np.arange(0,2*np.pi+0.1,0.1)
+    #x_c = np.mean(swarmobj.q[0][0])
+    #y_c = np.mean(swarmobj.q[0][1])
+    #radius = (QC_q[0][0]**2 + QC_q[0][1]**2)**0.5
+    #theta_arr = np.arange(0,2*np.pi+0.1,0.1)
     #quasi_centroid_x.append(QC_q[0][0])
     #quasi_centroid_y.append(QC_q[0][1])
     #plt.plot(quasi_centroid_x,quasi_centroid_y)
@@ -313,7 +316,7 @@ def vv_step_constrained(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,ad
     #plt.show()
     
 def vv_step_qcmd_adiabatize(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng):    
-    #print('1 QC_p',QC_p[0])
+    
     global c1,c2
     mass_factor = (w_arr*MD_System.beta_n/MD_System.omega)**2
     mass_factor = np.insert(mass_factor,0,1/MD_System.omega**2)
@@ -352,7 +355,7 @@ def vv_step_qcmd_thermostat(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,delta
     gamma_qc =1.0
     c1_Q = np.exp(-(deltat/2.0)*gamma_qc)
     c2_Q = (1-c1_Q**2)**0.5 
-    
+     
     rand_gaus = rng.normal(0.0,1.0,np.shape(QC_q))
     QC_p[:] = c1_Q*QC_p + swarmobj.sm*(1/(MD_System.beta))**0.5*c2_Q*rand_gaus
     
@@ -434,7 +437,7 @@ def vv_step_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng):
          # Can be passed as an argument if reqd.
 
     etherm[0] += swarmobj.sys_kin()
-    
+        
     swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*ft_rearrange
     gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))
     swarmobj.p = c1*swarmobj.p + swarmobj.sm*(1/(MD_System.beta_n))**0.5*c2*gauss_rand 

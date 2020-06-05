@@ -8,6 +8,11 @@ Created on Thu Feb 13 15:15:02 2020
 import numpy as np
 
 """
+Eliminate all the global variable declaration, Clean up unwanted code, Maintain a standard format for potential definition
+
+"""
+
+"""
 The potential below is the stadium billiards potential that
 is generically used for understanding quantum chaos. Here, we 
 use two forms of the potential: One is 'smooth', and 
@@ -18,10 +23,12 @@ s: Smoothness parameter
 r_c: Radius of the curved semicircular region
 K: Energy of the potential 'wall'
 """
-Le = 2*(1/(np.pi+4)**0.5)  
+Le =  2*(1/(np.pi+4)**0.5)  
 s= 20.0
 r_c = 1/(np.pi+4)**0.5
 K = 10.0
+
+print('Le', Le, 'r_c', r_c)
 #print('Area',np.pi*r_c**2 + Le*2*r_c)
 
 def radial_to_cartesian(rforce):
@@ -48,7 +55,7 @@ def potential_sb(x,y):
 #        else:
 #            #r = ((x-Le/2)**2 +y**2)**0.5
 #            return K*(1/(1 + np.exp(-s*(-r_c + (y**2 + (-Le/2 + x)**2)**0.5))))
-
+    #print('hi', Le, r_c)    
     if(abs(x)<Le/2 and abs(y)<r_c):
         return 0.0
     elif(abs(x)<(Le/2+r_c) and abs(y)<r_c):
@@ -65,6 +72,8 @@ def potential_sb(x,y):
     else:
         return 1e5
 
+
+
 def pot_barrier(x,y,x_c,y_c,r_c):
     r = ((x-x_c)**2 + (y-y_c)**2)**0.5
     if(abs(r)<=r_c):
@@ -74,9 +83,9 @@ def pot_barrier(x,y,x_c,y_c,r_c):
         
 pot_barrier = np.vectorize(pot_barrier)
 
-Ls = 10.0
-r_c = 0.3
-n_barrier = 25
+#Ls = 10.0
+#r_c = 0.3
+#n_barrier = 25
 def potential_lg(x,y):
     if(abs(x)>Ls/2 or abs(y)>Ls/2):
         return 1e5
@@ -90,10 +99,11 @@ def potential_lg(x,y):
     
 def potential_coupled_quartic(x,y):
     b=0.1
-    return (b/4.0)*(x**4 + y**4) + 0.5*x**2*y**2
+    return  (b/4.0)*(x**4 + y**4) + 0.5*x**2*y**2
 
 def dpotential_coupled_quartic(Q):
     b=0.1
+    print('unwanted call')
     x = Q[:,0,...] #Change appropriately 
     y = Q[:,1,...]
     dpotx = x#(b/4.0)*(4*x**3 + y**4) + x*y**2
@@ -165,7 +175,7 @@ def potential_quartic(x,y):
 def dpotential_quartic(Q):
     return Q**3
 
-pot_code = 'V_sb'
+pot_code = 'V_hh'
 
 global potential, dxpotential, dypotential, ddpotential1, ddpotential2, ddpotential3, ddpotential4
 

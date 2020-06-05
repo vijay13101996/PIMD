@@ -49,7 +49,7 @@ def rearrange(w_arr):
     return w_arr[rearr]
 
 def system_definition(beta_g,n_b,dim,derivpotential):
-    #print('hi')
+    
     global dimension,gamma,beta,beta_n,n_beads,w_n,w_arr,omega,derpotential,w_arr_scaled
     dimension = dim
     gamma = 10.0
@@ -66,7 +66,7 @@ def system_definition(beta_g,n_b,dim,derivpotential):
     w_arr = rearrange(w_arr)
     
     omega = 32.0
-    print('omega',omega)
+    print('System definition: beta, n_beads, omega',beta,n_beads,omega)
     w_arr_scaled = np.ones(n_beads)*omega
     w_arr_scaled[0]=0.0
 
@@ -129,7 +129,7 @@ class swarm:
         self.q = None
         self.p = None
         self.N = N
-        self.m = 1.0#1741.1#
+        self.m = 1741.1#
         self.sm = np.sqrt(self.m)
         self.kinen = 0.0
         self.poten = 0.0 
