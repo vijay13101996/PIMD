@@ -87,7 +87,9 @@ def thermalize(CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): # Ther
     
     t=0.0
     etherm = np.zeros(1)
-    tarr.append(t)
+    
+    #---------------------------------------------------------------------------------------
+    #tarr.append(t)
     #print(swarmarr)
     #qarr.append(copy(swarmobj.q))
     #parr.append(copy(swarmobj.p))
@@ -96,6 +98,8 @@ def thermalize(CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): # Ther
     #ethermarr.append(etherm[0])
     #parr.append(swarmobj.p.copy())
     #count=0
+    #--------------------------------------------------------------------------------------- Beware of memory leaks when using any of the tools above!!!!!
+    
     Velocity_verlet.set_therm_param(deltat,MD_System.gamma)
     
     while (t<=thermtime):
@@ -105,7 +109,11 @@ def thermalize(CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): # Ther
         #print(etherm)
         #print(pspace)
         #print(t)
-            #tarr.append(t)
+        #if(count%50==0):
+         #   plt.plot(swarmobj.q[0,0,:],swarmobj.q[0,1,:])
+         #   plt.scatter(np.mean(swarmobj.q,axis=2)[0,0],np.mean(swarmobj.q,axis=2)[0,1])
+         #   plt.show()
+         #   #tarr.append(t)
             
             #qarr.append(swarmobj.q.copy())
             #parr.append(copy(swarmobj.p))

@@ -26,20 +26,19 @@ import time
 import pickle
 start_time = time.time()
 
-data = np.loadtxt(glob.glob('*08B_064NB_257NS_avg_mf.dat')[0])
+#data = np.loadtxt(glob.glob('*08B_064NB_257NS_avg_mf.dat')[0])
 
+## NOT CLEAR WHAT FILE THIS IS!!!1
 
+### This file standard organization has been screwed up. Beware when you try to do something with this!!!
 
-def mean_force_calculation(dpotential):
+def mean_force_calculation(dpotential,N,deltat,Q,n_sample):
     print(MD_System.n_beads,MD_System.w_arr)
-    N = 100
-    deltat = 1e-2
-    Q = np.linspace(-10,10,100)
+    
     swarmobject = MD_System.swarm(N)
     rand_boltz = np.random.RandomState(1000)
     swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/MD_System.beta,(swarmobject.N,MD_System.dimension,MD_System.n_beads))
-    print(np.shape(swarmobject.p))
-    n_sample = 10
+    
     rng=np.random.RandomState(1000)
     CMD=1
     
@@ -47,29 +46,37 @@ def mean_force_calculation(dpotential):
     
     for j in range(len(Q)):
         
-        swarmobject.q = np.zeros((swarmobject.N,MD_System.dimension,MD_System.n_beads)) + Q[j]
-        #print(swarmobject.q)
-        #print(np.shape(swarmobject.q))
-        thermalize(CMD,0,0,swarmobject,dpotential,deltat,5,rng)
+        swarmobject.q = np.zeros((swarmobject.N,MD_System.dimension,MD_System.n_beads))
+        swarmobject.q[:,0,:] = Q[j]
         
+        if(0):
+            Velocity_verlet.fourier_transform(swarmobject)
+            print(swarmobject.q[:,0,0])
+            Velocity_verlet.inv_fourier_transform(swarmobject)
+        
+        thermalize(CMD,0,0,swarmobject,dpotential,deltat,10000,rng)
+        print('j', j, time.time()-start_time )
         for i in range(n_sample):
-            CMD_force[j] += np.mean(dpotential(swarmobject.q))
-            thermalize(CMD,0,0,swarmobject,dpotential,deltat,2,rng)
+            #print('i',i)
+            print('dpot', (np.mean((swarmobject.q),axis=2))[0])
+            
+            force = dpotential(swarmobject.q)
+            force_bavg = np.mean(force,axis=2)
+            print('force', np.shape(force),force_bavg[0],np.sum(force,axis=2)[0]/MD_System.n_beads)
+            CMD_force[j] += np.mean(np.mean(dpotential(swarmobject.q),axis=2),axis=0)
+            print('i','CMD_force', CMD_force[j])
+            thermalize(CMD,0,0,swarmobject,dpotential,deltat,5000,rng)
     
     
     CMD_force/=n_sample    
         
-    f = open("CMD_Force_Morse_B_{}_NB_{}_100_10.dat".format(MD_System.beta,MD_System.n_beads),'w+')
+    f = open("/home/vgs23/Pickle_files/CMD_Force_B_{}_NB_{}_N_{}_nsample_{}_deltat_{}_NQ_{}.dat".format(MD_System.beta,MD_System.n_beads,N,n_sample,deltat,len(Q)),'w+')
+    
     CMD_force = CMD_force[:,0]
     print(CMD_force)
     for x in zip(Q,CMD_force):
         f.write("{}\t{}\n".format(x[0],x[1]))
     f.close()
-
-#MD_System.system_definition(8,64,MD_System.dpotential)
-#
-#importlib.reload(Velocity_verlet)
-#mean_force_calculation(MD_System.dpotential)
 
 def mean_force_calculation_2D(dpotential):
     print(MD_System.n_beads,MD_System.w_arr)

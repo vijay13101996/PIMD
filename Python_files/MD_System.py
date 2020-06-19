@@ -15,7 +15,7 @@ import multiprocessing as mp
 from functools import partial
 
 
-global dimension,gamma,beta,n_beads,w_n,w_arr,derpotential,w_arr_scaled,omega,beta_n
+global dimension,gamma,beta,n_beads,w_n,w_arr,derpotential,w_arr_scaled,omega,beta_n,mass_factor, cosw_arr, sinw_arr
 dimension = 1
 gamma = 1.0
 beta = 1
@@ -26,6 +26,9 @@ w_arr_scaled = np.ones(n_beads)
 w_arr_scaled[0] =0.0
 omega = 1.0
 centroid_force = None
+mass_factor = 1.0*np.ones(n_beads)
+cosw_arr = np.cos(w_arr_scaled)
+sinw_arr = np.sin(w_arr_scaled)
 
 arr = np.array(range(-int(n_beads/2),int(n_beads/2+1)))*np.pi/n_beads
     
@@ -50,9 +53,12 @@ def rearrange(w_arr):
 
 def system_definition(beta_g,n_b,dim,derivpotential):
     
-    global dimension,gamma,beta,beta_n,n_beads,w_n,w_arr,omega,derpotential,w_arr_scaled
+    global dimension,gamma,beta,beta_n,n_beads,w_n,w_arr,omega,derpotential,w_arr_scaled,mass_factor
     dimension = dim
-    gamma = 10.0
+    
+    friction_param = 1.0
+
+    gamma = 2*friction_param
     beta = beta_g
     n_beads = n_b
     beta_n = beta/n_beads  
@@ -65,9 +71,10 @@ def system_definition(beta_g,n_b,dim,derivpotential):
     
     w_arr = rearrange(w_arr)
     
-    omega = 32.0
+    omega = friction_param
+    mass_factor = (beta_n/omega)**2
     print('System definition: beta, n_beads, omega',beta,n_beads,omega)
-    w_arr_scaled = np.ones(n_beads)*omega
+    w_arr_scaled = np.ones(n_beads)*(omega/beta_n)**2
     w_arr_scaled[0]=0.0
 
 def potential(q):
@@ -118,7 +125,8 @@ def pos_op(q,p):
     return q.copy()
 
 def mom_op(q,p):
-    return p.copy()
+    return p.copy()/1741.1
+
 class swarm:
     """
     A class of particles and their associated dynamical variables
@@ -175,6 +183,7 @@ class swarm:
     def sys_grad_ring_pot(self):
         grad_ring_pot = self.m*w_arr**2*self.q
         return grad_ring_pot
+
     
     
 #------------------------------------------------------STRAY CODE

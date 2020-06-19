@@ -23,6 +23,7 @@ def RPMD_instance(rng,N,beads,dpotential,beta,T,deltat):
     importlib.reload(Velocity_verlet)
     
     swarmobject.q = np.zeros((swarmobject.N,MD_System.dimension,MD_System.n_beads)) +1.0
+    print('RP', MD_System.n_beads,MD_System.beta_n)
     rand_boltz = np.random.RandomState(rng)
     swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/(MD_System.beta),np.shape(swarmobject.q))
     

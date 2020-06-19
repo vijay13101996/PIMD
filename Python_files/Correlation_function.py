@@ -15,18 +15,20 @@ import scipy
 #from System_potential import dpotential,potential
 from MD_Evolution import time_evolve,time_evolve_nc,time_evolve_qcmd
 from Langevin_thermostat import thermalize, qcmd_thermalize
-#import psutil
-
+import psutil
+import time
+import sys
 
 def corr_function_QCMD(swarmobj,QC_q,QC_p,lambda_curr,A,B,time_corr,deltat,dpotential,rng_ind):
     rng = np.random.RandomState(rng_ind)
-    tcf_tarr = np.arange(0,time_corr+0.0001,time_corr/100.0)
+    n_tp = 10
+    tcf_tarr = np.arange(0,time_corr+0.0001,time_corr/n_tp)
     tcf = np.zeros_like(tcf_tarr)
-    tcf_taux = np.arange(0,2*time_corr+0.0001,time_corr/100.0)
+    tcf_taux = np.arange(0,2*time_corr+0.0001,time_corr/n_tp)
     A_arr = np.zeros((len(tcf_taux),)+QC_q.shape)
     B_arr = np.zeros_like(A_arr)
-    n_approx = 5
-    qcmd_thermalize(0,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,200,rng)
+    n_approx = 1
+    qcmd_thermalize(0,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,1000,rng)
     kin_en = swarmobj.sys_kin()
     print('kin en', kin_en)
     print('kin_en qc',np.sum(QC_p*QC_p)/(2*swarmobj.m))
@@ -54,11 +56,11 @@ def corr_function_QCMD(swarmobj,QC_q,QC_p,lambda_curr,A,B,time_corr,deltat,dpote
 #                #print(A_arr[i+j]*B_arr[j] + B_arr[i+j]*A_arr[j])
 #                tcf[i] += np.sum(A_arr[i+k]*B_arr[k] + B_arr[i+k]*A_arr[k]) 
         
-        #print('j finished')
-        qcmd_thermalize(0,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,200.0,rng)
+        print('j finished', time.time())
+        qcmd_thermalize(0,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,500.0,rng)
     
     print('Dimension:', MD_System.dimension)
-    tcf/=(n_approx*swarmobj.N*len(tcf)*MD_System.dimension)
+    tcf/=(n_approx*swarmobj.N*len(tcf))#*MD_System.dimension)    ## BE CAREFUL HERE!!!
     return tcf
 
 def corr_function(swarmobj,A,B,time_corr,deltat,rng_ind):
@@ -97,33 +99,51 @@ def corr_function(swarmobj,A,B,time_corr,deltat,rng_ind):
  
 def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,deltat,rng_ind):
     rng = np.random.RandomState(rng_ind)
-    tcf_tarr = np.arange(0,time_corr+0.0001,time_corr/100.0)
-    
+    n_tp = 5000
+    tcf_tarr = np.arange(0,time_corr+0.0001,time_corr/n_tp)
     tcf = np.zeros_like(tcf_tarr)
-    
-    tcf_taux = np.arange(0,2*time_corr+0.0001,time_corr/100.0)
+   
+    tcf_taux = np.arange(0,2*time_corr+0.0001,time_corr/n_tp)
     A_arr = np.zeros((len(tcf_taux),)+swarmobj.q.shape)
     B_arr = np.zeros_like(A_arr)
 
-    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,1000,rng)
-    n_approx = 10
-    print('kin en',swarmobj.sys_kin())
-    #print('time_corr',time_corr)
-     #The above line have to be treated on a case to case basis
+    A_centroid = np.zeros((len(tcf_taux),) + swarmobj.q[:,:,0].shape)
+    B_centroid = np.zeros_like(A_centroid)
+
+    start_time = time.time()
+    print('time 1', time.time()-start_time)
+    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,10000,rng)
+    n_approx = 1
+    print('kin en',swarmobj.sys_kin()) 
+    #The above line have to be treated on a case to case basis
+    
     for j in range(n_approx):
-        #print('j',j)
+        print('j starting',j,time.time()-start_time)
         A_arr[0] = A(swarmobj.q,swarmobj.p)
         B_arr[0] = B(swarmobj.q,swarmobj.p)
-        if(1):
-            for i in range(1,len(tcf_taux)):
-                
-                time_evolve(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1])
-                #time_evolve_nc(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1],rng)
-                A_arr[i] = A(swarmobj.q,swarmobj.p)
-                B_arr[i] = B(swarmobj.q,swarmobj.p)
         
-        A_centroid = np.sum(A_arr,axis=3)/MD_System.n_beads
-        B_centroid = np.sum(B_arr,axis=3)/MD_System.n_beads
+        if(1):      
+            for i in range(1,len(tcf_taux)):  
+                if(psutil.virtual_memory()[2] > 60.0):
+                    print('Memory limit exceeded, exiting...', psutil.virtual_memory()[2])
+                    sys.exit()
+
+                if(i%1000==0):
+                     print(i, 'memory prev',psutil.virtual_memory()[3], psutil.virtual_memory()[2])       
+                #time_evolve(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1])
+                time_evolve_nc(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1],rng)  # ACMD!!!
+                                               
+                #A_arr[i] = A(swarmobj.q,swarmobj.p)
+                #B_arr[i] = B(swarmobj.q,swarmobj.p)
+                
+                A_centroid[i] = np.sum(A(swarmobj.q,swarmobj.p),axis=2)/MD_System.n_beads
+                B_centroid[i] = np.sum(B(swarmobj.q,swarmobj.p),axis=2)/MD_System.n_beads
+
+                if(i%1000==0):
+                    print( 'memory after',psutil.virtual_memory()[3], psutil.virtual_memory()[2])
+
+        #A_centroid = np.sum(A_arr,axis=3)/MD_System.n_beads
+        #B_centroid = np.sum(B_arr,axis=3)/MD_System.n_beads
         
         A_centroid[len(tcf):] = 0.0
         tcf_cr = convolution(A_centroid,B_centroid,0)
@@ -137,8 +157,11 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
 #                #print(A_arr[i+j]*B_arr[j] + B_arr[i+j]*A_arr[j])
 #                tcf[i] += np.sum(A_centroid[i+k]*B_centroid[k] + B_centroid[i+k]*A_centroid[k]) 
     #tcf[i] += np.sum(A_0*B_t)
-        thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,500,rng)
+        thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,5000,rng)
+        print('j ending',j,time.time()-start_time)
+    
     tcf/=(n_approx*swarmobj.N*len(tcf))#*MD_System.dimension)
+    print("RP Simulation Done, TCF length: ", len(tcf))
     #!!! It is unclear if the TCF is to be scaled by dimension. Beware when you make any changes above.
     return tcf
 

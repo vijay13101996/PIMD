@@ -34,7 +34,7 @@ module position_matrix
 			!print*, x_arr(10),x_arr(14),x_arr(20)
 			!print*, vecs(21,13),vecs(18,12),vecs(14,9)
 			do i = 1,len1vecs
-					pos_mat_elt = pos_mat_elt + vecs(i,n+1)*vecs(i,k+1)*x_arr(i)*dx*dy
+					pos_mat_elt = pos_mat_elt + vecs(i,n+1)*vecs(i,k+1)*x_arr(i)*dx*dy !! Change here for 1D 
 			end do
 
 		end subroutine pos_matrix_elts
@@ -270,7 +270,7 @@ t_arr,lent,beta,n_eigen,OTOC_mat)
 			integer :: i
 			!f2py real,dimension(lent),intent(in,out,copy) :: Kubo_OTOC_mat
 			real,dimension(lent),intent(inout) :: Kubo_OTOC_mat
-			print*, 'Here'
+			!print*, 'Here'
 			do i=1,lent
 				call Kubo_OTOC_elts(vecs,len1vecs,len2vecs,x_arr,lenx,dx,dy,k_arr,lenk,vals_arr,lenv&
 					,m_arr,lenm,t_arr(i),beta,n_eigen,Kubo_OTOC_mat(i))

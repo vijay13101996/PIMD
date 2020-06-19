@@ -14,6 +14,7 @@ from multiprocessing import Process
 from Velocity_verlet import vv_step,vv_step_nc_thermostat,vv_step_constrained,vv_step_qcmd_thermostat,vv_step_qcmd_adiabatize
 import Velocity_verlet
 import MD_System
+import psutil
 
 tarr = []
 ethermarr= []
@@ -23,12 +24,16 @@ energyarr =[]
 global count
 count=0
 def time_evolve_nc(CMD,Matsubara,M,swarmobj,dpotential,deltat,T,rng):
+    #mem = psutil.virtual_memory()[3]
+    #print( 'i memory prev',psutil.virtual_memory()[3]-mem, psutil.virtual_memory()[2])
     t=0.0
-    Velocity_verlet.set_therm_param(deltat,2*MD_System.omega)
-    while (abs(t-T)>2e-3):
+    #Velocity_verlet.set_therm_param(deltat,2*MD_System.omega)
+    while (abs(t-T)>1e-4):
         vv_step_nc_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,rng)
         t+=deltat
- 
+    #print( ' memory after',psutil.virtual_memory()[3]-mem, psutil.virtual_memory()[2])    
+
+
 def time_evolve_qcmd(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,T,rng):
     global count
     t=0.0

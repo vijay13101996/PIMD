@@ -28,7 +28,7 @@ s= 20.0
 r_c = 1/(np.pi+4)**0.5
 K = 10.0
 
-print('Le', Le, 'r_c', r_c)
+#print('Le', Le, 'r_c', r_c)
 #print('Area',np.pi*r_c**2 + Le*2*r_c)
 
 def radial_to_cartesian(rforce):
@@ -83,9 +83,9 @@ def pot_barrier(x,y,x_c,y_c,r_c):
         
 pot_barrier = np.vectorize(pot_barrier)
 
-#Ls = 10.0
-#r_c = 0.3
-#n_barrier = 25
+Ls = 10.0
+r_c = 0.3
+n_barrier = 25
 def potential_lg(x,y):
     if(abs(x)>Ls/2 or abs(y)>Ls/2):
         return 1e5
@@ -97,6 +97,10 @@ def potential_lg(x,y):
         #return pot_barrier(x,y,-0.0,-0.0,r_c) #+ pot_barrier(x,y,0.2,0.2,r_c) \
                #+ pot_barrier(x,y,-0.2,0.2,r_c) + pot_barrier(x,y,0.2,-0.2,r_c)
     
+def potential_coupled_harmonic(x,y):
+    g0 = 0.1
+    return (1.0/4)*(x**2 + y**2) + g0*x**2*y**2
+
 def potential_coupled_quartic(x,y):
     b=0.1
     return  (b/4.0)*(x**4 + y**4) + 0.5*x**2*y**2
@@ -134,7 +138,7 @@ def dpotential_cb_x(x,y):
     return dpotx
 
 def dpotential_cb(Q):
-    #print('hereh',np.shape(Q))
+    #print('hereh') 
     x = Q[:,0,...] #Change appropriately 
     y = Q[:,1,...]
     K=0.49
@@ -149,10 +153,10 @@ def dpotential_cb(Q):
     #dpotx = 1.0*K*x*(-r_c + (x**2 + y**2)**0.5)*(x**2 + y**2)**(-0.5)
     #dpoty = 1.0*K*y*(-r_c + (x**2 + y**2)**0.5)*(x**2 + y**2)**(-0.5)
     
-    #dpotx = 1.0*x #+ 2*x*y + 4*x*(x**2 + y**2)
-    #dpoty = 1.0*y #+ x**2 - 1.0*y**2 + 4*y*(x**2 + y**2) 
+    #dpotx = 1.0*x**2#+ 2*x*y + 4*x*(x**2 + y**2)
+    #dpoty = 1.0*y**3#+ x**2 - 1.0*y**2 + 4*y*(x**2 + y**2) 
     ret = np.transpose(np.array([dpotx,dpoty]),(1,0,2))
-    #print(ret)
+    
     return ret
 
 def potential_rh(x,y):

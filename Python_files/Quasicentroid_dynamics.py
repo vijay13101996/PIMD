@@ -32,7 +32,7 @@ def QC_MF_calculation(dpotential,N,n_sample,NQ,deltat):
     rng=np.random.RandomState(1)
     
     for j in range(len(Q)):
-        swarmobject.q = np.zeros((swarmobject.N,MD_System.dimension,MD_System.n_beads)) + 1.0 
+        swarmobject.q = np.zeros((swarmobject.N,MD_System.dimension,MD_System.n_beads)) + 1.0  
         print('j and time',j, time.time()-start_time)   
         QC_q = np.zeros((swarmobject.N,MD_System.dimension)) 
         QC_q[:,0] = Q[j] 
@@ -40,15 +40,17 @@ def QC_MF_calculation(dpotential,N,n_sample,NQ,deltat):
         lambda_curr = np.zeros_like(swarmobject.q)
         
         Langevin_thermostat.qcmd_thermalize(1,swarmobject,QC_q,QC_p,lambda_curr,dpotential,deltat,10000,rng)
-        
+        print('Kinetic energy constrained', swarmobject.sys_kin()) 
         for i in range(n_sample):
             QC_MF[j] += np.mean(Velocity_verlet.dpotential_qcentroid(QC_q,swarmobject,dpotential),axis=0)
+            print('i','QC_MF', QC_MF[j])
             Langevin_thermostat.qcmd_thermalize(1,swarmobject,QC_q,QC_p,lambda_curr,dpotential,deltat,5000,rng)
-            print('time',time.time()-start_time)
+            print('time',time.time()-start_time, swarmobject.sys_kin())
     QC_MF/=n_sample
     ### BE CAREFUL WITH THE SIGN OF THE POTENTIAL HERE. You have used
     #   force and gradient of potential interchangeably
     f = open("/home/vgs23/Pickle_files/QCMD_Force_B_{}_NB_{}_N_{}_nsample_{}_deltat_{}_NQ_{}.dat".format(MD_System.beta,MD_System.n_beads,N,n_sample,deltat,len(Q)),'w+')
+    
     QCMD_force = QC_MF[:,0]
     for x in zip(Q,QCMD_force):
         f.write("{}\t{}\n".format(x[0],x[1]))
@@ -64,12 +66,13 @@ def QCMD_instance(beads,dpotential,beta):
     MD_System.system_definition(beta,beads,2,dpotential)
     importlib.reload(Velocity_verlet)
     N=100
-    n_sample=1
+    n_sample=5
     NQ = 50
     deltat = 1.0
-    #QC_MF_calculation(dpotential,N,n_sample,NQ,deltat)
+    QC_MF_calculation(dpotential,N,n_sample,NQ,deltat)
     
     f = open("/home/vgs23/Pickle_files/QCMD_Force_B_{}_NB_{}_N_{}_nsample_{}_deltat_{}_NQ_{}.dat".format(MD_System.beta,MD_System.n_beads,N,n_sample,deltat,NQ),'rb')       
+    #print("/home/vgs23/Pickle_files/QCMD_Force_B_{}_NB_{}_N_{}_nsample_{}_deltat_{}_NQ_{}.dat".format(MD_System.beta,MD_System.n_beads,N,n_sample,deltat,NQ))
     data = np.loadtxt(f)
     Q = data[:,0]
     QCMD_force = data[:,1]

@@ -32,7 +32,10 @@ import Quasicentroid_dynamics
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import Potentials_2D
+import Potentials_1D
 import csv
+import Centroid_dynamics
+
 
 potential = Potentials_2D.potential_cb
 dpotential = Potentials_2D.dpotential_cb
@@ -51,22 +54,45 @@ if(0):
     #ax.plot_surface(X,Y,Z)
     plt.show()
 
-deltat = 5.0
-N = 100
+def fourier_component_w(t_arr,tcf,w):
+    dt = t_arr[1]-t_arr[0]
+    ft_w = 0
+    for i in range(len(t_arr)):
+        ft_w += dt*np.exp(-1j*w*t_arr[i])*tcf[i]
+    return ft_w
+
+def fourier_transform(t_arr, tcf,w_arr):
+    four_trans = np.zeros_like(w_arr) + 0j
+    for i in range(len(w_arr)):
+        four_trans[i] = fourier_component_w(t_arr,tcf,w_arr[i])
+    return four_trans
+
+deltat = 4
+N = 1000
 T = 20000.0#5.0*deltat#5000.0*deltat#3000*deltat
-tcf_tarr = np.arange(0,T+0.0001,T/100.0)
+
+n_tp = 5000
+dt_tp = T/n_tp
+tcf_tarr = np.arange(0,T+0.0001,dt_tp)
 tcf = np.zeros_like(tcf_tarr) 
 
-beads=10
+
+fs =  41.341374575751
+
+beads=32
 T_K = 200
 beta= 315773/T_K#500.0    # Take care of redefinition of beta, when using QCMD!
-n_instance = 10
+n_instance =1
 print('N',N)#*100*n_instance)
-print('Beta T_K',MD_System.beta, T_K)
+print('Beta T_K',beta, T_K)
 print('deltat',deltat)
 print('beads',beads)
 
-if(0):
+ACMD = 1
+CMD = 0
+QCMD = 0 
+
+if(QCMD==1):
     rforce = Quasicentroid_dynamics.QCMD_instance(beads,dpotential,beta)
     print('time',time.time() - start_time)
     
@@ -95,31 +121,7 @@ if(0):
     #plt.show()
     
     Quasicentroid_dynamics.compute_tcf_QCMD(n_instance,N,force_xy,beta,T,deltat)
-if(1):
-        beta_arr = [315773/200,315773/400,315773/600,315773/800]
-        T_arr = [200,400,600,800]
-        color_arr = ['r','g','b','m']
-        for (betaa,colour,t_k) in zip(beta_arr,color_arr,T_arr): 
-            tcf = np.zeros_like(tcf_tarr)
-            #n_instance = 1
-            for i in range(n_instance):
-                f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP1.dat'.format(N*100,betaa,i,T,deltat),'rb')
-                #print('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP1.dat'.format(N*100,betaa,i,T,deltat),'rb') 
-                tcf += pickle.load(f)
-                f.close()
-                #print(i,'completed')
-           
-            tcf/=(n_instance)
-            store_arr = zip(tcf_tarr,tcf)
-            print(store_arr)
-            txt_file =  open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_T_{}K_Time_{}_dt_{}.csv'.format(N*100,t_k,T,deltat),'w')
-            writer = csv.writer(txt_file, delimiter='\t')
-            writer.writerows(store_arr)
-            print(tcf[0],tcf[3],tcf[7])
-            plt.plot(tcf_tarr,tcf,color=colour)
-            #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
-        plt.show()
-        
+       
 if(0):
     """
     This code is for the Adiabatic implementation of Quasicentroid 
@@ -128,9 +130,9 @@ if(0):
     Quasicentroid_dynamics.compute_tcf_AQCMD(n_instance,N,beads,dpotential,beta,T,deltat)
     
     for i in range(n_instance):
-        f = open('/home/vgs23/Pickle_files/AQCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_NB_{}.dat'.format(N*100,beta*beads,i,T,deltat,beads),'rb')
+        f = open('/home/vgs23/Pickle_files/AQCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_NB_{}.dat'.format(N*100,beta,i,T,deltat,beads),'rb')
         tcf+= pickle.load(f)
-        #plt.plot(tcf_tarr,tcf,color='r')
+        plt.plot(tcf_tarr,tcf,color='r')
         #plt.plot(tcf_tarr,np.cos(tcf_tarr),color='g')
         f.close()
         print(i,'completed')
@@ -145,19 +147,19 @@ if(0):
         tcf += pickle.load(f)
         f.close()
         print(i,'completed')
-    plt.plot(tcf_tarr,tcf,color='g')
+    #plt.plot(tcf_tarr,tcf,color='g')
     plt.show()
 
-if(0):
+if(ACMD==1):
     
     """
     This code is for Adiabatic implementation of Centroid Molecular 
     dynamics.
     """
-    Centroid_dynamics.compute_tcf(n_instance,N,beads,dpotential_morse,beta,T,deltat)
+    Centroid_dynamics.compute_tcf_ACMD(n_instance,N,beads,dpotential,beta,T,deltat)
 
     for i in range(n_instance):
-        f = open('/home/vgs23/Pickle_files/ACMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'rb')
+        f = open('/home/vgs23/Pickle_files/ACMD_vv_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_NB_{}_SAMP2.dat'.format(N*100,beta,i,T,deltat,beads),'rb')
         tcf += pickle.load(f)
         f.close()
         print(i,'completed')
@@ -167,6 +169,21 @@ if(0):
     #print(tcf[0]*beads, tcf[5]*beads,tcf[45]*beads,tcf[89]*beads)
     print(tcf[0],tcf[3],tcf[7])
     plt.plot(tcf_tarr,tcf,color='r')
+    #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
+    #plt.show()
+
+    tcf*=0.0
+    for i in range(n_instance):
+            f = open('/home/vgs23/Pickle_files/CMD_vv_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP2.dat'.format(N*100,beta,i,T,2.0),'rb')
+            tcf += pickle.load(f)
+            f.close()
+            print(i,'completed')
+        
+    tcf/=(n_instance)
+    #tcf*=beads
+    #print(tcf[0]*beads, tcf[5]*beads,tcf[45]*beads,tcf[89]*beads)
+    print(tcf[0],tcf[3],tcf[7])
+    plt.plot(tcf_tarr,tcf,color='g')
     #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
     plt.show()
 
@@ -192,16 +209,29 @@ if(0):
     #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
     plt.show()
 #---------------------------------------------------------CMD
-if(0):
-    xforce = Centroid_dynamics.CMD_instance(beads,dpotential_morse,beta)
-#    Q=np.arange(0,10,0.01) 
-#    plt.plot(Q,xforce(Q))
-#    plt.plot(Q,dpotential_morse(Q))
-#    plt.show()
-    
-    Ring_polymer_dynamics.compute_tcf(n_instance,N,1,xforce,beta, T,deltat)
+if(CMD==1):
+    xforce = Centroid_dynamics.CMD_instance(beads,dpotential,beta)
+    Q=np.arange(0.5,3,0.1) 
+    plt.plot(Q,xforce(Q))
+    #plt.plot(Q,dpotential_morse(Q))
+    plt.show()
+   
+    def force_xy(Q):
+        x = Q[:,0,...]
+        y = Q[:,1,...]
+        r = (x**2+y**2)**0.5
+        force_r = xforce(r)
+
+        #force_xy = force_r*abs(np.array([x/r,y/r]))
+        dpotx = force_r*(x/r)
+        dpoty = force_r*(y/r)
+        ret = np.transpose(np.array([dpotx,dpoty]),(1,0,2))
+        return ret#np.array([dpotx,dpoty])
+
+    Centroid_dynamics.compute_tcf_CMD(n_instance,N,force_xy,beta,T,deltat)
     for i in range(n_instance):
-        f = open('/home/vgs23/Pickle_files/CMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'rb')
+        f =  open('/home/vgs23/Pickle_files/CMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP1.dat'.format(N*100,beta,i,T,deltat),'rb')
+        #open('/home/vgs23/Pickle_files/CMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'rb')
         tcf += pickle.load(f)
         f.close()
         print(i,'completed')

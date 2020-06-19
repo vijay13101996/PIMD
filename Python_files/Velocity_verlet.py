@@ -16,7 +16,7 @@ from multiprocessing import Process
 from scipy import fftpack
 import scipy 
 import MD_System
-#import psutil
+import psutil
 #import MD_Simulation
 
 global count 
@@ -75,18 +75,21 @@ def vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat):
 #    swarmobj.q += (deltat/swarmobj.m)*swarmobj.p
 #    swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)
 #-------------------------------------------------------------------
-    if(1):
+    if(0): 
         cosw_arr = np.cos(w_arr*deltat)
         sinw_arr = np.sin(w_arr*deltat)
     
-    if(0):
+    if(0):  #ACMD
         cosw_arr = np.cos(w_arr_scaled*deltat)
-        sinw_arr = np.sin(w_arr_scaled*deltat)
-        mass_factor = (w_arr/MD_System.omega)**2
+        sinw_arr = np.sin(w_arr_scaled*deltat)   ## BEWARE WHEN YOU MAKE ANY CHANGES!
         #pot_factor = 1/MD_System.n_beads
     
     swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)#swarmobj.sys_grad_pot()
     
+    if(CMD==1):
+        fourier_transform(swarmobj)
+        swarmobj.p[:,:,0] = 0.0
+        inv_fourier_transform(swarmobj)    
 
 #    swarmobj.p -= (deltat/2.0)*swarmobj.sys_grad_ring_pot_coord()
 #    swarmobj.q += (deltat/swarmobj.m)*swarmobj.p
@@ -97,20 +100,20 @@ def vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat):
     if(1):
         if(CMD!=1):
             swarmobj.q[:,:,0]+=(deltat/swarmobj.m)*swarmobj.p[:,:,0]
-        
+             
         
         temp = swarmobj.p[:,:,1:].copy()
         
-        if(1):
+        if(0):
             swarmobj.p[:,:,1:] = cosw_arr*swarmobj.p[:,:,1:] \
                                - swarmobj.m*w_arr*sinw_arr*swarmobj.q[:,:,1:]
             swarmobj.q[:,:,1:] = sinw_arr*temp/(swarmobj.m*w_arr) \
                                 + cosw_arr*swarmobj.q[:,:,1:]
-        if(0):
-            swarmobj.p[:,:,1:] = cosw_arr*swarmobj.p[:,:,1:] \
-                               - swarmobj.m*mass_factor*w_arr_scaled*sinw_arr*swarmobj.q[:,:,1:]
-            swarmobj.q[:,:,1:] = sinw_arr*temp/(swarmobj.m*mass_factor*w_arr_scaled) \
-                                + cosw_arr*swarmobj.q[:,:,1:]
+        if(1): #ACMD
+            swarmobj.p[:,:,1:] = MD_System.cosw_arr*swarmobj.p[:,:,1:] \
+                               - swarmobj.m*MD_System.mass_factor*w_arr_scaled*MD_System.sinw_arr*swarmobj.q[:,:,1:]
+            swarmobj.q[:,:,1:] = MD_System.sinw_arr*temp/(swarmobj.m*MD_System.mass_factor*w_arr_scaled) \
+                                + MD_System.cosw_arr*swarmobj.q[:,:,1:]
                         
         if(Matsubara==1):
             
@@ -124,7 +127,12 @@ def vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat):
     inv_fourier_transform(swarmobj)
     
     swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)#*swarmobj.sys_grad_pot()
-    
+   
+    if(CMD==1):
+        fourier_transform(swarmobj)
+        swarmobj.p[:,:,0] = 0.0
+        inv_fourier_transform(swarmobj)
+
     if(0):
         global count
         count+=1
@@ -199,7 +207,7 @@ def SHAKE(swarmobj,q0,deltat,lambda_curr,R):
     #print('R',R)
     q_d=swarmobj.q.copy()
     count=0 
-    while((abs(sigma(q_d,R)) > 1e-3).any()): 
+    while((abs(sigma(q_d,R)) > 5e-4).any()): 
         
         q_d = swarmobj.q + lambda_curr*(dsigma(q0))/swarmobj.m
         denom = np.sum(dsigma(q_d)*dsigma(q0),axis = 1)
@@ -221,7 +229,7 @@ def SHAKE(swarmobj,q0,deltat,lambda_curr,R):
         lambda_curr+=dlambda
         count+=1
         
-        if(count>1e3):
+        if(count>1e6):
             print('count exceeded')#,(abs(sigma(q_d,R)))[abs(sigma(q_d,R))>1e-2]  )
             print(np.where(abs(sigma(q_d,R))>1e-2  ))
             break
@@ -249,20 +257,20 @@ def RATTLE(q,p):
     
 def dpotential_qcentroid(QC_q,swarmobj,dpotential):
     
-    r_arr = (1/len(swarmobj.q[0,0,:]))*abs((swarmobj.q[...,0,:]**2 + swarmobj.q[...,1,:]**2)**0.5)
+    r_arr = abs((swarmobj.q[...,0,:]**2 + swarmobj.q[...,1,:]**2)**0.5) #  (1/len(swarmobj.q[0,0,:]))*
     r_arr = r_arr[:,np.newaxis]
     r_arr = np.repeat(r_arr,2,axis=1)
     uv = swarmobj.q/r_arr
-    
+     
     dp = np.sum(uv*dpotential(swarmobj.q),axis=1)
-    radial_force = -(1/len(swarmobj.q[0,0,:]))*np.sum(dp,axis=1)
+    radial_force = (1/len(swarmobj.q[0,0,:]))*np.sum(dp,axis=1)  # add minus, if reqd.
     radial_force = radial_force[:,np.newaxis]
     radial_force = np.repeat(radial_force,2,axis=1)
-    
-    qc_norm = (1/len(QC_q[0,:]))*(QC_q[:,0]**2 + QC_q[:,1]**2)**0.5
+     
+    qc_norm = (QC_q[:,0]**2 + QC_q[:,1]**2)**0.5 # (1/len(QC_q[0,:]))*
     qc_norm = qc_norm[:,np.newaxis]
     qc_norm = np.repeat(qc_norm,2,axis=1)
-    ret = -(QC_q/qc_norm)*radial_force
+    ret = (QC_q/qc_norm)*radial_force    # add minus if reqd.
     return ret
 
 def vv_step_constrained(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,adiabatic): 
@@ -349,6 +357,8 @@ def vv_step_qcmd_adiabatize(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng
     swarmobj.p = scipy.fftpack.irfft(swarmobj.p,axis=2)
     
     RATTLE(swarmobj.q,swarmobj.p)
+
+    #### It is supposed to be MD_System.beta_n not MD_System.beta..... BEWARE!
     
 def vv_step_qcmd_thermostat(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng):
     global c1,c2
@@ -357,7 +367,8 @@ def vv_step_qcmd_thermostat(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,delta
     c2_Q = (1-c1_Q**2)**0.5 
      
     rand_gaus = rng.normal(0.0,1.0,np.shape(QC_q))
-    QC_p[:] = c1_Q*QC_p + swarmobj.sm*(1/(MD_System.beta))**0.5*c2_Q*rand_gaus
+    if(QCMD!=1):
+        QC_p[:] = c1_Q*QC_p + swarmobj.sm*(1/(MD_System.beta))**0.5*c2_Q*rand_gaus
     
     swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*ft_rearrange
     gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))
@@ -370,7 +381,8 @@ def vv_step_qcmd_thermostat(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,delta
     vv_step_constrained(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,0)
     
     rand_gaus = rng.normal(0.0,1.0,np.shape(QC_q))
-    QC_p[:] = c1_Q*QC_p + swarmobj.sm*(1/(MD_System.beta))**0.5*c2_Q*rand_gaus
+    if(QCMD!=1):
+        QC_p[:] = c1_Q*QC_p + swarmobj.sm*(1/(MD_System.beta))**0.5*c2_Q*rand_gaus
     
     swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*ft_rearrange
     gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))         
@@ -382,11 +394,10 @@ def vv_step_qcmd_thermostat(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,delta
     
 def vv_step_nc_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,rng):
     global c1,c2
-    mass_factor = (w_arr/MD_System.omega)**2
     
     swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*ft_rearrange
     gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))
-    swarmobj.p[:,:,1:] = c1*swarmobj.p[:,:,1:] + swarmobj.sm*mass_factor**0.5*(1/(MD_System.beta_n))**0.5*c2*gauss_rand[:,:,1:] 
+    swarmobj.p[:,:,1:] = c1*swarmobj.p[:,:,1:] + swarmobj.sm*MD_System.mass_factor**0.5*(1/(MD_System.beta_n))**0.5*c2*gauss_rand[:,:,1:] 
     swarmobj.p*=(1/ft_rearrange)
     swarmobj.p = scipy.fftpack.irfft(swarmobj.p,axis=2) 
         
@@ -396,16 +407,15 @@ def vv_step_nc_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,rng):
       
     # Done! Taken care of!: 
        #  Be extra careful in the above step when you vectorize the code.
-    
    
     vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat)
       
     swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*ft_rearrange
     gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))         
-    swarmobj.p[:,:,1:] = c1*swarmobj.p[:,:,1:] + swarmobj.sm*mass_factor**0.5*(1/(MD_System.beta_n))**0.5*c2*gauss_rand[:,:,1:]  
+    swarmobj.p[:,:,1:] = c1*swarmobj.p[:,:,1:] + swarmobj.sm*MD_System.mass_factor**0.5*(1/(MD_System.beta_n))**0.5*c2*gauss_rand[:,:,1:]  
     swarmobj.p*=(1/ft_rearrange)
     swarmobj.p = scipy.fftpack.irfft(swarmobj.p,axis=2)
-        
+            
  
 def set_therm_param(deltat,gamma):
     global c1,c2
@@ -413,8 +423,6 @@ def set_therm_param(deltat,gamma):
     c1 = np.exp(-(deltat/2.0)*gamma)
     c2 = (1-c1**2)**0.5
     
-  
-
 def vv_step_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng):
     
     """ 
