@@ -47,12 +47,13 @@ Ensure that the OTOC normalized is adjusted for 1D systems
 
 L = 1.0
 N = 100
-dx = L/N
-dy= L/N
 a = -L
 b = L
 x= np.linspace(a,b,N+1)
-y= np.linspace(0.75*a,0.75*b,N+1)
+y= np.linspace(0.5*a,0.5*b,N+1)        #### CHANGE the grid according to the potential, when computing OTOC
+dx = x[1]-x[0]
+dy= y[1]-y[0]
+print('dx dy', dx, dy)
 hbar = 1.0
 mass = 0.5
 
@@ -93,9 +94,9 @@ This part of the code contains the necessary tools to compute the
 OTOC for a 2D system. 
 """
 
-potential_2D = Potentials_2D.potential_coupled_harmonic
+potential_2D = Potentials_2D.potential_sb
 print('pot', potential_2D(2,2))
-pot_key = 'Coupled_harmonic'#'Stadium_billiards' #'Stadium_billiards'#'Coupled_quartic'#'Quartic'#'Harmonic'#'Coupled_harmonic'
+pot_key = 'Stadium_billiards'#'Coupled_harmonic'#'Coupled_quartic'#'Quartic'#'Harmonic'#
 
 if(plot_potential==1):
     #wf = eigenstate(vecs[:,26])
@@ -107,10 +108,10 @@ if(plot_potential==1):
     X,Y =np.meshgrid(x,y)
     potential_2D = np.vectorize(potential_2D)
    
-    plt.title('Stadium Billiards')
+    plt.title('{}'.format(pot_key))
     plt.xlabel('x')
     plt.ylabel('y')
-    plt.imshow(potential_2D(X,Y),origin='lower',extent=[a,b,0.75*a,0.75*b])
+    plt.imshow(potential_2D(X,Y),origin='lower',extent=[x[0],x[-1],y[0],y[-1]])
     plt.show()
     
     fig = plt.figure()
@@ -195,8 +196,8 @@ if(1):
     
     """
     
-    basis_N = 250
-    n_eigen = 150
+    basis_N = 400
+    n_eigen = 100
     basis_x = np.zeros((N,N))
     f = open("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}.dat".format(pot_key,N),'rb')
     #open("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}_Ls_{}_rc_{}_n_barrier_{}.dat".format(pot_key,N,Potentials_2D.Ls,Potentials_2D.r_c,Potentials_2D.n_barrier),'rb')   
@@ -258,18 +259,22 @@ if(1):
         """
 
         beta = 1.0/100
-        t_final = 15.0
+        t_final = 3.0
         t_arr = np.arange(0.0,t_final,0.01)
-        print('beta,n_basis,n_eigen',beta,basis_N,n_eigen)
+        
          
         #c_mc_arr = np.zeros_like(t_arr)
         #c_mc_arr = OTOC_f.position_matrix.compute_c_mc_arr_t(vecs,x_arr,dx,dy,k_arr,vals,0,m_arr,t_arr,c_mc_arr)
         OTOC_arr =np.zeros_like(t_arr)
         
         beta_arr = 1.0/np.array([1,2,3,4,5])   ### This is for Coupled_harmonic
-        #beta_arr = 1.0/np.array([1,40,200,400])
-        #beta_arr = [1.0/400]
-        if(1):   
+        beta_arr = 1.0/np.array([1,40,200,400])### This is for Stadium billiards
+        #beta_arr = 1.0/np.array([1,2,4,10])   ### This is for Coupled_quartic
+        #beta_arr = [1.0/400]      
+        print('beta_arr,n_basis,n_eigen',beta_arr,basis_N,n_eigen)
+        print('Boltzmann factor', np.exp(-beta_arr[0]*vals[n_eigen-1]), np.exp(-beta_arr[0]*vals[0]))
+
+        if(0):   
             for betaa in beta_arr: 
                 print('vals,vecs',np.shape(vecs),np.shape(vals))
                 OTOC_arr = OTOC_f.position_matrix.compute_kubo_otoc_arr_t(vecs,x_arr,dx,dy,k_arr,vals,m_arr,t_arr,betaa,n_eigen,OTOC_arr) 
@@ -288,12 +293,12 @@ if(1):
         matplotlib.rcParams.update({'font.size': 17})
         fig = plt.figure(1)
         ax = fig.add_subplot(1,1,1)
-        #plt.yscale('log')
-        #ax.set_ylim([0.001,1000])
+        plt.yscale('log')
+        ax.set_ylim([0.005,500])
         #ax.text(20,30, r'$\beta = 1/1000$')
         plt.xlabel(r'$t$')
         plt.ylabel(r'$\tilde{C}(t)$')
-        plt.title('OTOC for 1D Box')
+        #plt.title('OTOC for 1D Box')
 
         print('Pot details',Potentials_2D.r_c)
         color_arr = ['r','g','b','m','c']
@@ -311,10 +316,21 @@ if(1):
             print('beta','colour', beta, colour) 
             #print('OTOC_arr',OTOC_arr)
             ax.plot(t_arr,OTOC_arr,color=colour,label=lab)
-        
+       
+        if(0):
+            f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,beta,basis_N,n_eigen,t_final),'rb')
+            #f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.r_c,beta,50,50,3.0),'rb') 
+            t_arr = pickle.load(f)
+            OTOC_arr = pickle.load(f)
+            #print(OTOC_arr)
+            f.close()
+            print('beta','colour', beta, colour) 
+            #print('OTOC_arr',OTOC_arr)
+            ax.plot(t_arr,OTOC_arr,color=colour,label=lab)
+
         if(0):
 
-            f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,basis_N,n_eigen,t_final),'rb')
+            f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,50,50,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr = pickle.load(f)
             f.close()
@@ -322,17 +338,17 @@ if(1):
             #print('OTOC_arr',OTOC_arr)
             ax.plot(t_arr,OTOC_arr,color='g')
 
-            f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,9,Potentials_2D.r_c,beta,30,30,t_final),'rb')
+            f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.n_barrier,Potentials_2D.r_c,beta,30,30,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr = pickle.load(f)
             f.close()
             
-            #ax.plot(t_arr,OTOC_arr,color='m')
+            ax.plot(t_arr,OTOC_arr,color='m')
             
-            f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,25,Potentials_2D.r_c,beta,30,30,t_final),'rb')
-            t_arr = pickle.load(f)
-            OTOC_arr = pickle.load(f)
-            f.close()
+            #f = open("/home/vgs23/Pickle_files/OTOC_{}_n_barrier_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D,Potentials_2D.r_c,beta,30,30,t_final),'rb')
+            #t_arr = pickle.load(f)
+            #OTOC_arr = pickle.load(f)
+            #f.close()
         
             #ax.plot(t_arr,OTOC_arr,color='g')
         ax.legend()
@@ -342,20 +358,21 @@ if(1):
             ax = fig.add_subplot(1,1,1)
             plt.yscale('log')
             ax.set_ylim([0.1,100])
+            beta = 1/400.0
             
             f = open("/home/vgs23/Pickle_files/OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,80,80,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr1 = pickle.load(f)
             f.close()
             
-            #ax.plot(t_arr,(OTOC_arr1),color='g',label='80,80')
+            ax.plot(t_arr,(OTOC_arr1),color='g',label='80,80')
             
             f = open("/home/vgs23/Pickle_files/OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,90,90,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr2 = pickle.load(f)
             f.close()
             
-            #ax.plot(t_arr,OTOC_arr2,color='r',label='90,90')
+            ax.plot(t_arr,OTOC_arr2,color='r',label='90,90')
             
             f = open("/home/vgs23/Pickle_files/OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,100,100,t_final),'rb')
             t_arr = pickle.load(f)
@@ -369,14 +386,14 @@ if(1):
             OTOC_arr4 = pickle.load(f)
             f.close()
             
-            #ax.plot(t_arr,(OTOC_arr4),color='m',label='50,40')
+            ax.plot(t_arr,(OTOC_arr4),color='m',label='50,40')
             
             f = open("/home/vgs23/Pickle_files/OTOC_stadium_billiards_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(beta,50,100,t_final),'rb')
             t_arr = pickle.load(f)
             OTOC_arr5 = pickle.load(f)
             f.close()
             
-            #ax.plot(t_arr,(OTOC_arr5),color='c',label='50,100')
+            ax.plot(t_arr,(OTOC_arr5),color='c',label='50,100')
             plt.title('OTOC for Stadium billiards at 400K')
             ax.legend()
             plt.show()

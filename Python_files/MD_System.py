@@ -56,7 +56,7 @@ def system_definition(beta_g,n_b,dim,derivpotential):
     global dimension,gamma,beta,beta_n,n_beads,w_n,w_arr,omega,derpotential,w_arr_scaled,mass_factor
     dimension = dim
     
-    friction_param = 1.0
+    friction_param = 10.0
 
     gamma = 2*friction_param
     beta = beta_g

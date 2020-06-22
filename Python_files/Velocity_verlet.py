@@ -104,12 +104,12 @@ def vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat):
         
         temp = swarmobj.p[:,:,1:].copy()
         
-        if(0):
-            swarmobj.p[:,:,1:] = cosw_arr*swarmobj.p[:,:,1:] \
-                               - swarmobj.m*w_arr*sinw_arr*swarmobj.q[:,:,1:]
-            swarmobj.q[:,:,1:] = sinw_arr*temp/(swarmobj.m*w_arr) \
-                                + cosw_arr*swarmobj.q[:,:,1:]
-        if(1): #ACMD
+        if(1):
+            swarmobj.p[:,:,1:] = MD_System.cosw_arr*swarmobj.p[:,:,1:] \
+                               - swarmobj.m*w_arr*MD_System.sinw_arr*swarmobj.q[:,:,1:]
+            swarmobj.q[:,:,1:] = MD_System.sinw_arr*temp/(swarmobj.m*w_arr) \
+                                + MD_System.cosw_arr*swarmobj.q[:,:,1:]
+        if(0): #ACMD
             swarmobj.p[:,:,1:] = MD_System.cosw_arr*swarmobj.p[:,:,1:] \
                                - swarmobj.m*MD_System.mass_factor*w_arr_scaled*MD_System.sinw_arr*swarmobj.q[:,:,1:]
             swarmobj.q[:,:,1:] = MD_System.sinw_arr*temp/(swarmobj.m*MD_System.mass_factor*w_arr_scaled) \
@@ -445,7 +445,7 @@ def vv_step_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng):
          # Can be passed as an argument if reqd.
 
     etherm[0] += swarmobj.sys_kin()
-        
+    
     swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*ft_rearrange
     gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))
     swarmobj.p = c1*swarmobj.p + swarmobj.sm*(1/(MD_System.beta_n))**0.5*c2*gauss_rand 

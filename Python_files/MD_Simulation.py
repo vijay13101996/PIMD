@@ -36,6 +36,7 @@ import Potentials_1D
 import csv
 import Centroid_dynamics
 
+#######    !!!!! CHANGE MASS in MD_System when simulating again, CHANGE VV_STEP function!
 
 potential = Potentials_2D.potential_cb
 dpotential = Potentials_2D.dpotential_cb
@@ -67,7 +68,7 @@ def fourier_transform(t_arr, tcf,w_arr):
         four_trans[i] = fourier_component_w(t_arr,tcf,w_arr[i])
     return four_trans
 
-deltat = 4
+deltat = 0.4
 N = 1000
 T = 20000.0#5.0*deltat#5000.0*deltat#3000*deltat
 

@@ -15,6 +15,8 @@ from Velocity_verlet import vv_step, vv_step_thermostat, vv_step_qcmd_thermostat
 #from MD_System import gamma
 import MD_System
 import Velocity_verlet
+import psutil
+import sys
 
 tarr = []
 ethermarr= []
@@ -103,6 +105,9 @@ def thermalize(CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): # Ther
     Velocity_verlet.set_therm_param(deltat,MD_System.gamma)
     
     while (t<=thermtime):
+        if(psutil.virtual_memory()[2] > 60.0):
+                    print('Memory limit exceeded, exiting...', psutil.virtual_memory()[2])
+                    sys.exit()
         vv_step_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng)
         t+=deltat
         #count+=1

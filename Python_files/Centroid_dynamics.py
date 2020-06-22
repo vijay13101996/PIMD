@@ -57,7 +57,7 @@ def ACMD_instance(rng,N,beads,dpotential,beta,T,deltat):
     rand_boltz = np.random.RandomState(rng)
     swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/(MD_System.beta),np.shape(swarmobject.q))
     
-    pool = mp.Pool(mp.cpu_count()-6)
+    pool = mp.Pool(mp.cpu_count()-6)    ### Using 6 cores is the safest!
     print('Using', mp.cpu_count()-6, 'cores')
     Matsubara = 0
     CMD=0

@@ -42,11 +42,12 @@ def phase_space_average(CMD,Matsubara,M,swarmobj,derpotential,tim,deltat,rng_ind
     
     #taux = np.arange(0,2*tim+0.001,tim/100.0)
     
-    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,100,rng)
+    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,200,rng)
+    print('Time 1', time.time()-start_time)
     n_approx = 1
     Quan_arr = np.zeros_like(tarr)
-    print('thermalized')
-    #plt.scatter(swarmobj.q[:,0],swarmobj.q[:,1])
+    print('thermalized', swarmobj.sys_kin()/(N*n_beads), swarmobj.m, swarmobj.sm, np.sum(swarmobj.p**2))
+    #plt.plot(np.mean(swarmobj.q,axis=2)[:,0],np.mean(swarmobj.q,axis=2)[:,1])
     #plt.show()
     if(0):
         for j in range(n_approx):
@@ -77,19 +78,20 @@ def phase_space_average(CMD,Matsubara,M,swarmobj,derpotential,tim,deltat,rng_ind
             tcf_cr = np.sum(tcf_cr,axis=2) #Summing up over dimensions
             tcf_cr = np.sum(tcf_cr,axis=1) #Summing up over the number of particles
             print('tcf',np.shape(tcf_cr))
-        
+        print('Time 2', time.time()-start_time)
         Quan_arr+= np.sum(Monodromy.detmqq_RP(traj_arr),axis=1)#tcf_cr[:len(tarr)]#
-        thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,20,rng)
-    #Quan_arr/=(n_approx*swarmobj.N) 
-    Quan_arr/=(n_approx*swarmobj.N*MD_System.dimension*len(tarr))
+        thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,100,rng)
+    Quan_arr/=(n_approx*swarmobj.N) 
+    #Quan_arr/=(n_approx*swarmobj.N*MD_System.dimension*len(tarr))
     return Quan_arr
 
 N=100
 dim = 2
-n_beads = 20
-beta = 1.0
+n_beads = 4
+beta = 1.0/10
 deltat=1e-2
-T = 50.0
+T = 15.0
+
 tarr = np.arange(0,T+0.0001,T/100.0)
 fig = plt.figure(1)
 plt.suptitle('Thermal averaged stability matrix elements: Time evolution')
@@ -99,6 +101,9 @@ plt.ylabel(r'$<M_{qq}>$')
 def set_sim(N,dim,n_beads,beta,deltat,col):
     swarmobject = MD_System.swarm(N)
     MD_System.system_definition(beta,n_beads,dim,MD_System.dpotential)   #78943.7562025: Liquid Helium temperature
+    swarmobject.m = 0.5
+    swarmobject.sm = 0.5**0.5
+    MD_System.gamma = 10.0
     imp.reload(Velocity_verlet)
     Monodromy.system_definition_RP(N,dim,n_beads,n_beads/beta)
 
@@ -113,17 +118,20 @@ def set_sim(N,dim,n_beads,beta,deltat,col):
     M=0
 
     Marr =phase_space_average(CMD,Matsubara,M,swarmobject,Monodromy.dpotential_cq_vv,T,deltat,1)
+   
     #cProfile.run('phase_space_average(CMD,Matsubara,M,swarmobject,Monodromy.force_dpotential,T,deltat,1)')
     print('Time taken:',time.time()-start_time)
     #fig = plt.figure(1)
-    plt.plot(tarr,2*np.log(abs(Marr)),color=col,label=r'N_b={}'.format(n_beads))
+    #plt.plot(tarr[:50], Marr[:50])
+    plt.plot(tarr,np.log(abs(Marr)),color=col,label=r'$N_b={}$'.format(n_beads))
+    #plt.plot(tarr,0.5*tarr)
     plt.legend()
     #plt.plot(tarr,abs(Marr)**2)
     #plt.plot(tarr,Marr)
 
 
-#set_sim(N,dim,n_beads,beta,deltat)
-beadarr = [1,10,20,30]
+#set_sim(N,dim,n_beads,beta,deltat,'g')
+beadarr = [n_beads]#,4,10]#,20,30]
 colorarr = ['r','g','b','m']
 for (n_bead,col) in zip(beadarr,colorarr):
     set_sim(N,dim,n_bead,beta,deltat,col)
