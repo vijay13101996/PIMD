@@ -50,8 +50,6 @@ def ACMD_instance(rng,N,beads,dpotential,beta,T,deltat):
     MD_System.system_definition(beta,beads,2,dpotential)
     importlib.reload(Velocity_verlet)
     Velocity_verlet.set_therm_param(deltat,MD_System.gamma) 
-    MD_System.cosw_arr = np.cos(MD_System.w_arr_scaled[1:]*deltat)
-    MD_System.sinw_arr = np.sin(MD_System.w_arr_scaled[1:]*deltat)
     
     swarmobject.q = np.zeros((swarmobject.N,MD_System.dimension,MD_System.n_beads)) + 1.0
     rand_boltz = np.random.RandomState(rng)
@@ -61,9 +59,10 @@ def ACMD_instance(rng,N,beads,dpotential,beta,T,deltat):
     print('Using', mp.cpu_count()-6, 'cores')
     Matsubara = 0
     CMD=0
+    ACMD=1
     
-    n_inst = 10
-    func = partial(corr_function_upgrade,CMD,Matsubara,beads,swarmobject,dpotential,MD_System.mom_op,MD_System.mom_op,T,deltat)
+    n_inst = 6
+    func = partial(corr_function_upgrade,ACMD,CMD,Matsubara,beads,swarmobject,dpotential,MD_System.pos_op,MD_System.pos_op,T,deltat)
     results = pool.map(func, range(n_inst)) 
     pool.close()
     pool.join()
@@ -74,7 +73,7 @@ def compute_tcf_ACMD(n_ACMD_instance,N,beads,dpotential,beta,T,deltat):
     for i in range(n_ACMD_instance):
         print('ACMD initiated')
         tcf =  ACMD_instance((i+1)*100,N,beads,dpotential,beta,T,deltat)
-        f = open('/home/vgs23/Pickle_files/ACMD_vv_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_NB_{}_SAMP2.dat'.format(N*100,MD_System.beta,i,T,deltat,MD_System.n_beads),'wb')
+        f = open('/home/vgs23/Pickle_files/ACMD_vv_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_NB_{}_SAMP3.dat'.format(N*100,MD_System.beta,i,T,deltat,MD_System.n_beads),'wb')
         pickle.dump(tcf,f)
         #plt.plot(tcf_tarr,tcf,color='r')
         #plt.plot(tcf_tarr,np.cos(tcf_tarr),color='g')

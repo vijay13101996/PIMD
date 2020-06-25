@@ -52,11 +52,11 @@ def rearrange(w_arr):
     return w_arr[rearr]
 
 def system_definition(beta_g,n_b,dim,derivpotential):
-    
-    global dimension,gamma,beta,beta_n,n_beads,w_n,w_arr,omega,derpotential,w_arr_scaled,mass_factor
+    # Ensure that cos_warr and sin_warr values are changed as per the simulation requirements 
+    global dimension,gamma,beta,beta_n,n_beads,w_n,w_arr,omega,derpotential,w_arr_scaled,mass_factor, cosw_arr, sinw_arr
     dimension = dim
     
-    friction_param = 10.0
+    friction_param = 32.0
 
     gamma = 2*friction_param
     beta = beta_g
@@ -72,11 +72,16 @@ def system_definition(beta_g,n_b,dim,derivpotential):
     w_arr = rearrange(w_arr)
     
     omega = friction_param
-    mass_factor = (beta_n/omega)**2
+    mass_factor = (beta_n*w_arr[1:]/omega)**2 #
     print('System definition: beta, n_beads, omega',beta,n_beads,omega)
-    w_arr_scaled = np.ones(n_beads)*(omega/beta_n)**2
+    w_arr_scaled = np.ones(n_beads)*(omega/beta_n)#**2
     w_arr_scaled[0]=0.0
+    w_arr_scaled = w_arr_scaled[1:]
+    
+    cosw_arr = np.cos(w_arr_scaled)
+    sinw_arr = np.sin(w_arr_scaled)
 
+    print('shape', cosw_arr)
 def potential(q):
     """
     The quartic potential 0.25 x^4
@@ -188,4 +193,3 @@ class swarm:
     
 #------------------------------------------------------STRAY CODE
 
-##print(rearr)

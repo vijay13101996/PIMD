@@ -20,14 +20,17 @@ import psutil
 #import MD_Simulation
 
 global count 
-count =0  
+count =0 
 
-w_arr = MD_System.w_arr[1:]
-w_arr_scaled = MD_System.w_arr_scaled[1:]
-print('w_arr vv',len(w_arr),w_arr)
-print('w_arr_scaled',len(w_arr_scaled))
-cosw_arr = None 
-sinw_arr = None 
+
+if(0):
+    w_arr = MD_System.w_arr[1:]
+    w_arr_scaled = MD_System.w_arr_scaled[1:]
+    print('w_arr vv',len(w_arr),w_arr)
+    print('w_arr_scaled',len(w_arr_scaled))
+    cosw_arr = None 
+    sinw_arr = None 
+
 ft_rearrange= np.ones(MD_System.n_beads)*(-(2.0/MD_System.n_beads)**0.5)
 ft_rearrange[0] = 1/MD_System.n_beads**0.5
 
@@ -58,7 +61,7 @@ def normal_mode_force(swarmobj,dpotential):
  
 
 count=0      
-def vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat):
+def vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat):
     
     """
     
@@ -74,7 +77,7 @@ def vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat):
 #    swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)
 #    swarmobj.q += (deltat/swarmobj.m)*swarmobj.p
 #    swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)
-#-------------------------------------------------------------------
+#------------------------------------------------------------------
     if(0): 
         cosw_arr = np.cos(w_arr*deltat)
         sinw_arr = np.sin(w_arr*deltat)
@@ -104,15 +107,18 @@ def vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat):
         
         temp = swarmobj.p[:,:,1:].copy()
         
-        if(1):
+        if(ACMD==0):
+            print('ACMD')
             swarmobj.p[:,:,1:] = MD_System.cosw_arr*swarmobj.p[:,:,1:] \
                                - swarmobj.m*w_arr*MD_System.sinw_arr*swarmobj.q[:,:,1:]
             swarmobj.q[:,:,1:] = MD_System.sinw_arr*temp/(swarmobj.m*w_arr) \
                                 + MD_System.cosw_arr*swarmobj.q[:,:,1:]
-        if(0): #ACMD
+        if(ACMD==1):
+            #print( 'mass factor', swarmobj.m*MD_System.mass_factor*MD_System.w_arr_scaled**2, swarmobj.m*MD_System.w_arr**2)
+            #print('coswarr', (MD_System.cosw_arr),np.cos(MD_System.w_arr_scaled))
             swarmobj.p[:,:,1:] = MD_System.cosw_arr*swarmobj.p[:,:,1:] \
-                               - swarmobj.m*MD_System.mass_factor*w_arr_scaled*MD_System.sinw_arr*swarmobj.q[:,:,1:]
-            swarmobj.q[:,:,1:] = MD_System.sinw_arr*temp/(swarmobj.m*MD_System.mass_factor*w_arr_scaled) \
+                               - swarmobj.m*MD_System.mass_factor*MD_System.w_arr_scaled*MD_System.sinw_arr*swarmobj.q[:,:,1:]
+            swarmobj.q[:,:,1:] = MD_System.sinw_arr*temp/(swarmobj.m*MD_System.mass_factor*MD_System.w_arr_scaled) \
                                 + MD_System.cosw_arr*swarmobj.q[:,:,1:]
                         
         if(Matsubara==1):
@@ -407,8 +413,8 @@ def vv_step_nc_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,rng):
       
     # Done! Taken care of!: 
        #  Be extra careful in the above step when you vectorize the code.
-   
-    vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat)
+     
+    vv_step(1,CMD,Matsubara,M,swarmobj,dpotential,deltat)
       
     swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*ft_rearrange
     gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))         
@@ -419,11 +425,11 @@ def vv_step_nc_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,rng):
  
 def set_therm_param(deltat,gamma):
     global c1,c2
-    #print('gamma',gamma)
+    print('gamma called',gamma)
     c1 = np.exp(-(deltat/2.0)*gamma)
     c2 = (1-c1**2)**0.5
     
-def vv_step_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng):
+def vv_step_thermostat(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng):
     
     """ 
     
@@ -462,7 +468,7 @@ def vv_step_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng):
        #  Be extra careful in the above step when you vectorize the code.
     
    
-    vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat)
+    vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat)
    
     etherm[0] += swarmobj.sys_kin()
     

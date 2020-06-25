@@ -18,6 +18,7 @@ from Langevin_thermostat import thermalize, qcmd_thermalize
 import psutil
 import time
 import sys
+import Velocity_verlet
 
 def corr_function_QCMD(swarmobj,QC_q,QC_p,lambda_curr,A,B,time_corr,deltat,dpotential,rng_ind):
     rng = np.random.RandomState(rng_ind)
@@ -97,9 +98,9 @@ def corr_function(swarmobj,A,B,time_corr,deltat,rng_ind):
     return tcf
 
  
-def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,deltat,rng_ind):
+def corr_function_upgrade(ACMD,CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,deltat,rng_ind):
     rng = np.random.RandomState(rng_ind)
-    n_tp = 5000
+    n_tp = 1000
     tcf_tarr = np.arange(0,time_corr+0.0001,time_corr/n_tp)
     tcf = np.zeros_like(tcf_tarr)
    
@@ -109,14 +110,14 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
 
     A_centroid = np.zeros((len(tcf_taux),) + swarmobj.q[:,:,0].shape)
     B_centroid = np.zeros_like(A_centroid)
-
+     
     start_time = time.time()
     print('time 1', time.time()-start_time)
-    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,10000,rng)
-    n_approx = 1
+    thermalize(ACMD,CMD,Matsubara,M,swarmobj,derpotential,deltat,1000,rng)
+    n_approx = 1    ### Toggle thermalize on when using more than one sample
     print('kin en',swarmobj.sys_kin()) 
     #The above line have to be treated on a case to case basis
-    
+    #Velocity_verlet.set_therm_param(deltat,64.0) 
     for j in range(n_approx):
         print('j starting',j,time.time()-start_time)
         A_arr[0] = A(swarmobj.q,swarmobj.p)
@@ -130,8 +131,10 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
 
                 if(i%1000==0):
                      print(i, 'memory prev',psutil.virtual_memory()[3], psutil.virtual_memory()[2])       
-                #time_evolve(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1])
-                time_evolve_nc(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1],rng)  # ACMD!!!
+                if(ACMD==0):
+                    time_evolve(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1])
+                else:
+                    time_evolve_nc(CMD,Matsubara,M,swarmobj, derpotential, deltat, tcf_taux[i]-tcf_taux[i-1],rng)  # ACMD!!!
                                                
                 #A_arr[i] = A(swarmobj.q,swarmobj.p)
                 #B_arr[i] = B(swarmobj.q,swarmobj.p)
@@ -157,7 +160,7 @@ def corr_function_upgrade(CMD,Matsubara,M,swarmobj,derpotential,A,B,time_corr,de
 #                #print(A_arr[i+j]*B_arr[j] + B_arr[i+j]*A_arr[j])
 #                tcf[i] += np.sum(A_centroid[i+k]*B_centroid[k] + B_centroid[i+k]*A_centroid[k]) 
     #tcf[i] += np.sum(A_0*B_t)
-        thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,5000,rng)
+        #thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,5000,rng)
         print('j ending',j,time.time()-start_time)
     
     tcf/=(n_approx*swarmobj.N*len(tcf))#*MD_System.dimension)

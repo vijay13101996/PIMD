@@ -107,7 +107,7 @@ def potential_coupled_quartic(x,y):
 
 def dpotential_coupled_quartic(Q):
     b=0.1
-    print('unwanted call')
+    #print('unwanted call')
     x = Q[:,0,...] #Change appropriately 
     y = Q[:,1,...]
     dpotx = x#(b/4.0)*(4*x**3 + y**4) + x*y**2

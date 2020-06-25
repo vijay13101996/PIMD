@@ -657,7 +657,7 @@ def func_RP(y,t):
         dycdt = np.concatenate((P_c.flatten()/m,-dpotential_c(q).flatten(),dd_mpp_c.flatten(),dd_mpq_c.flatten(),Mpp_c.flatten()/m,Mpq_c.flatten()/m))
     dydt = np.concatenate((p.flatten()/m,-(dpotential_coupled_quartic(q)+dpotential_ring(q)).flatten(),dd_mpp.flatten(),dd_mpq.flatten(),Mpp.flatten()/m, Mpq.flatten()/m  ))
     dYdt = np.concatenate((dydt,dycdt))
-    print('count', count,t, (Mqq>1e7).any(), np.log(np.linalg.det(Mqq[0,0,:]))/t)
+    print('count', count,t, (Mqq>1e7).any(), np.log(np.linalg.det(Mqq[0,0,:])))
     return dYdt
 
 def ode_instance_RP(q,p,tarr):

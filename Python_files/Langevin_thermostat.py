@@ -71,7 +71,7 @@ def qcmd_thermalize(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,thermt
             plt.show()
         count+=1
 
-def thermalize(CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): # Thermalize is working well.
+def thermalize(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): # Thermalize is working well.
     
     """
     This function 'thermalizes' the given system using Langevin thermostat
@@ -108,7 +108,7 @@ def thermalize(CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): # Ther
         if(psutil.virtual_memory()[2] > 60.0):
                     print('Memory limit exceeded, exiting...', psutil.virtual_memory()[2])
                     sys.exit()
-        vv_step_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng)
+        vv_step_thermostat(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng)
         t+=deltat
         #count+=1
         #print(etherm)

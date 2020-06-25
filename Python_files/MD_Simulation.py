@@ -36,7 +36,7 @@ import Potentials_1D
 import csv
 import Centroid_dynamics
 
-#######    !!!!! CHANGE MASS in MD_System when simulating again, CHANGE VV_STEP function!
+### CHANGE VV_STEP function!
 
 potential = Potentials_2D.potential_cb
 dpotential = Potentials_2D.dpotential_cb
@@ -68,19 +68,18 @@ def fourier_transform(t_arr, tcf,w_arr):
         four_trans[i] = fourier_component_w(t_arr,tcf,w_arr[i])
     return four_trans
 
-deltat = 0.4
+deltat = 0.1
 N = 1000
-T = 20000.0#5.0*deltat#5000.0*deltat#3000*deltat
+T = 1000.0#5.0*deltat#5000.0*deltat#3000*deltat
 
-n_tp = 5000
+n_tp = 1000
 dt_tp = T/n_tp
 tcf_tarr = np.arange(0,T+0.0001,dt_tp)
 tcf = np.zeros_like(tcf_tarr) 
 
-
 fs =  41.341374575751
 
-beads=32
+beads=4
 T_K = 200
 beta= 315773/T_K#500.0    # Take care of redefinition of beta, when using QCMD!
 n_instance =1
@@ -160,33 +159,33 @@ if(ACMD==1):
     Centroid_dynamics.compute_tcf_ACMD(n_instance,N,beads,dpotential,beta,T,deltat)
 
     for i in range(n_instance):
-        f = open('/home/vgs23/Pickle_files/ACMD_vv_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_NB_{}_SAMP2.dat'.format(N*100,beta,i,T,deltat,beads),'rb')
+        f = open('/home/vgs23/Pickle_files/ACMD_vv_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_NB_{}_SAMP3.dat'.format(N*100,beta,i,T,deltat,beads),'rb')
         tcf += pickle.load(f)
         f.close()
         print(i,'completed')
     
     tcf/=(n_instance)
-    #tcf*=beads
-    #print(tcf[0]*beads, tcf[5]*beads,tcf[45]*beads,tcf[89]*beads)
     print(tcf[0],tcf[3],tcf[7])
     plt.plot(tcf_tarr,tcf,color='r')
     #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
-    #plt.show()
-
-    tcf*=0.0
-    for i in range(n_instance):
-            f = open('/home/vgs23/Pickle_files/CMD_vv_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP2.dat'.format(N*100,beta,i,T,2.0),'rb')
-            tcf += pickle.load(f)
-            f.close()
-            print(i,'completed')
-        
-    tcf/=(n_instance)
-    #tcf*=beads
-    #print(tcf[0]*beads, tcf[5]*beads,tcf[45]*beads,tcf[89]*beads)
-    print(tcf[0],tcf[3],tcf[7])
-    plt.plot(tcf_tarr,tcf,color='g')
-    #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
     plt.show()
+
+    if(1):
+        tcf*=0.0
+        for i in range(n_instance):
+                f = open('/home/vgs23/Pickle_files/CMD_vv_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP2.dat'.format(N*100,beta,i,20000.0,2.0),'rb')
+                tcf = pickle.load(f)
+                print(tcf[0])
+                f.close()
+                print(i,'completed')
+            
+        tcf/=(n_instance)
+        #tcf*=beads
+        print(tcf[0], tcf[5]*beads,tcf[45]*beads,tcf[89]*beads)
+        #print(tcf[0],tcf[3],tcf[7])
+        #plt.plot(tcf_tarr,tcf,color='g')
+        #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
+        #plt.show()
 
 #------------------------------------------------------- RPMD
 if(0):
