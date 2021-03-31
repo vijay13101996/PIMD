@@ -8,9 +8,15 @@ Created on Thu Feb 13 15:15:02 2020
 import numpy as np
 
 """
-Eliminate all the global variable declaration, Clean up unwanted code, Maintain a standard format for potential definition
-
+TO DO:
+1. Remove all the global variable declaration, Clean up unwanted code, Maintain a standard format for potential definition
+2. Eliminate duplicate potential definitions.
 """
+
+
+
+
+
 
 """
 The potential below is the stadium billiards potential that
@@ -126,6 +132,31 @@ def potential_cb(x,y):
     V_cb = D0*(1 - np.exp(-alpha*(r-r_c)))**2
     return V_cb
 
+def potential_cb_r(r):
+    D0 = 0.18748
+    alpha = 1.1605
+    r_c = 1.8324
+    
+    V_cb = D0*(1 - np.exp(-alpha*(r-r_c)))**2
+    return V_cb
+
+def dpotential_cb_harm(r):
+    D0 = 0.18748
+    alpha = 1.1605
+    r_c = 1.8324
+    
+    dV_cb = 2*D0*alpha**2*(r-r_c)
+    return dV_cb
+
+
+def dpotential_cb_r(r):
+    D0 = 0.18748
+    alpha = 1.1605
+    r_c = 1.8324
+    
+    dV_cb = 2*D0*alpha*(1 - np.exp(-alpha*(r - r_c)))*np.exp(-alpha*(r - r_c)) #D0*(1 - np.exp(-alpha*(r-r_c)))**2
+    return dV_cb
+
 def dpotential_cb_x(x,y):
     K=0.49
     r_c = 1.89
@@ -159,6 +190,13 @@ def dpotential_cb(Q):
     
     return ret
 
+def dpotential3_cb(Q):
+    r = np.sum(Q**2,axis=1)**0.5
+    r = r[:,np.newaxis]
+    r = np.repeat(r,3,axis=1)
+    #print('Q,r',Q,r)
+    return Q*dpotential_cb_r(r)/r 
+
 def potential_rh(x,y):
     K=0.49
     r_c = 1.89
@@ -177,11 +215,11 @@ def potential_quartic(x,y):
     return 0.25*(x**4+y**4)
 
 def dpotential_quartic(Q):
-    return Q**3
+    return Q + 3*Q**2/10.0 + Q**3/25.0
 
 pot_code = 'V_hh'
 
-global potential, dxpotential, dypotential, ddpotential1, ddpotential2, ddpotential3, ddpotential4
+#global potential, dxpotential, dypotential, ddpotential1, ddpotential2, ddpotential3, ddpotential4
 
 if(pot_code == 'V_hh'):
     print('here')
@@ -384,4 +422,263 @@ elif(pot_code == 'V_sb'):
             else:
                 r = ((x-L/2)**2 +y**2)**0.5
                 return K*(s*(-1.0*s*y**2*(y**2 + (L - 2*x)**2/4)**(-1.0) + 2.0*s*y**2*(y**2 + (L - 2*x)**2/4)**(-1.0)*exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5)) + 1) - 1.0*y**2*(y**2 + (L - 2*x)**2/4)**(-1.5) + 1.0*(y**2 + (L - 2*x)**2/4)**(-0.5))*exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5)) + 1)**2)
+
+
+pot_code = 'V_cq'
+
+#global potential, dxpotential, dypotential, ddpotential1, ddpotential2, ddpotential3, ddpotential4
+
+b = 0.1
+def potential(x,y):
+    global b
+    return (b/4.0)*(x**4+y**4) + 0.5*x**2*y**2
+
+def dpotential_coupled_quartic(q):
+    global b
+    x = q[...,0]
+    y = q[...,1]
+    #dpotx = b*x**3 + 1.0*x*y**2#0.5*x + 2*b*x*y**2
+    #dpoty = b*y**3 + 1.0*x**2*y#0.5*y + 2*b*x**2*y #
+    
+    dpotx = 0.5*x + 2*b*x*y**2
+    dpoty = 0.5*y + 2*b*x**2*y 
+    
+    ret = np.array([dpotx,dpoty])
+    ret = np.transpose(ret, (1,2,0))
+    return ret
+
+def dpotential_cq_vv(Q):
+    global b
+    x = Q[:,0,...]
+    y = Q[:,1,...]
+    #dpotx = b*x**3 + 1.0*x*y**2# 0.5*x + 2*b*x*y**2 #
+    #dpoty = b*y**3 + 1.0*x**2*y#0.5*y + 2*b*x**2*y #    
+   
+    dpotx = 0.5*x + 2*b*x*y**2
+    dpoty = 0.5*y + 2*b*x**2*y 
+    
+    ret = np.array([dpotx,dpoty])
+    ret = np.transpose(ret, (1,0,2))
+    return ret
+
+def ddpotential_coupled_quartic(q):
+    global b
+    x = q[...,0]
+    y = q[...,1]
+    oa = np.ones_like(x)
+    #ddpot1 = 3*b*x**2 + 1.0*y**2#0.5+ 2*b*y**2#
+    #ddpot2 = 2.0*x*y # 4*b*x*y  #
+    #ddpot3 = 2.0*x*y # 4*b*x*y  #
+    #ddpot4 = 3*b*y**2 + 1.0*x**2# 0.5+ 2*b*x**2#
+    
+    ddpot1 = 0.5+ 2*b*y**2#
+    ddpot2 = 4*b*x*y  #
+    ddpot3 = 4*b*x*y  #
+    ddpot4 = 0.5+ 2*b*x**2#
+    ret = np.array([[ddpot1,ddpot2],[ddpot3,ddpot4]]) 
+    ret = np.transpose(ret,(2,3,1,0))
+    #print(ret)
+    return ret
+
+if(pot_code == 'V_hh'):
+    print('here')
+    def potential(x,y):
+        return x**2/2.0 + y**2/2.0 + x**2*y - y**3/3.0
+    
+    def dxpotential(x,y):
+        return  1.0*x + 2*x*y #+ 4*x*(x**2 + y**2)
+     
+    def dypotential(x,y):
+        return  1.0*y + x**2 - 1.0*y**2  #+ 4*y*(x**2 + y**2)
+
+    def ddpotential1(x,y):
+        return  1.0 + 2*y  #+12*x**2 + 4*y**2
+    
+    def ddpotential2(x,y):
+        return 0.0 + 2*x #+2*x*(4*y)
+
+    def ddpotential3(x,y):
+        return 0.0 + 2*x #+ 2*x*(4*y)
+    
+    def ddpotential4(x,y):
+        return 1.0 -2.0*y #+ 4*x**2 + 12*y**2
+
+elif(pot_code == 'V_lg'):
+    s1 = 4 
+    s2 = 2
+    r_c = 1.0
+    y_c = 5.0
+    x_c = 5.0
+    def potential(x,y):
+        #r = (x**2+y**2)**0.5
+        V_lg = 1/(exp(s2*(y + y_c)) + 1) + 1/(exp(s2*(x + x_c)) + 1) + 1/(exp(s1*(-r_c + (x**2 + y**2)**0.5)) + 1) + 1/(1 + exp(-s2*(y - y_c))) + 1/(1 + exp(-s2*(x - x_c)))
+        return V_lg
+    
+    def dxpotential(x,y):
+        return  -1.0*s1*x*(x**2 + y**2)**(-0.5)*exp(s1*(-r_c + (x**2 + y**2)**0.5))/(exp(s1*(-r_c + (x**2 + y**2)**0.5)) + 1)**2 - s2*exp(s2*(x + x_c))/(exp(s2*(x + x_c)) + 1)**2 + s2*exp(-s2*(x - x_c))/(1 + exp(-s2*(x - x_c)))**2
+     
+    def dypotential(x,y):
+        return  -1.0*s1*y*(x**2 + y**2)**(-0.5)*exp(s1*(-r_c + (x**2 + y**2)**0.5))/(exp(s1*(-r_c + (x**2 + y**2)**0.5)) + 1)**2 - s2*exp(s2*(y + y_c))/(exp(s2*(y + y_c)) + 1)**2 + s2*exp(-s2*(y - y_c))/(1 + exp(-s2*(y - y_c)))**2
+
+    def ddpotential1(x,y):
+        return  -1.0*s1**2*x**2*(x**2 + y**2)**(-1.0)*exp(-s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5)))**2 + 2.0*s1**2*x**2*(x**2 + y**2)**(-1.0)*exp(-2*s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5)))**3 + 1.0*s1*x**2*(x**2 + y**2)**(-1.5)*exp(-s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5)))**2 - 1.0*s1*(x**2 + y**2)**(-0.5)*exp(-s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5)))**2 - s2**2*exp(s2*(x + x_c))/(exp(s2*(x + x_c)) + 1)**2 + 2*s2**2*exp(2*s2*(x + x_c))/(exp(s2*(x + x_c)) + 1)**3 - s2**2*exp(-s2*(x - x_c))/(1 + exp(-s2*(x - x_c)))**2 + 2*s2**2*exp(-2*s2*(x - x_c))/(1 + exp(-s2*(x - x_c)))**3
+    
+    def ddpotential2(x,y):
+        return s1*x*y*(-1.0*s1*(x**2 + y**2)**(-1.0) + 2.0*s1*(x**2 + y**2)**(-1.0)*exp(-s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5))) + 1.0*(x**2 + y**2)**(-1.5))*exp(-s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5)))**2
+
+    def ddpotential3(x,y):
+        return s1*x*y*(-1.0*s1*(x**2 + y**2)**(-1.0) + 2.0*s1*(x**2 + y**2)**(-1.0)*exp(-s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5))) + 1.0*(x**2 + y**2)**(-1.5))*exp(-s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5)))**2
+    
+    def ddpotential4(x,y):
+        return -1.0*s1**2*y**2*(x**2 + y**2)**(-1.0)*exp(-s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5)))**2 + 2.0*s1**2*y**2*(x**2 + y**2)**(-1.0)*exp(-2*s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5)))**3 + 1.0*s1*y**2*(x**2 + y**2)**(-1.5)*exp(-s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5)))**2 - 1.0*s1*(x**2 + y**2)**(-0.5)*exp(-s1*(r_c - (x**2 + y**2)**0.5))/(1 + exp(-s1*(r_c - (x**2 + y**2)**0.5)))**2 - s2**2*exp(s2*(y + y_c))/(exp(s2*(y + y_c)) + 1)**2 + 2*s2**2*exp(2*s2*(y + y_c))/(exp(s2*(y + y_c)) + 1)**3 - s2**2*exp(-s2*(y - y_c))/(1 + exp(-s2*(y - y_c)))**2 + 2*s2**2*exp(-2*s2*(y - y_c))/(1 + exp(-s2*(y - y_c)))**3
+
+elif(pot_code == 'V_lg_m'):
+    s1 = 4 
+    s2 = 2
+    r_c = 0.4
+    y_c = 10.0
+    x_c = 10.0
+    K=10.0
+    l = -5
+    u = 7
+    space = 2
+    
+    #print(np.arange(l,u,space))
+    def potential(x,y):
+        V_lg_m = K*(1/(exp(s2*(y + y_c)) + 1) + 1/(exp(s2*(x + x_c)) + 1)  + 1/(1 + exp(-s2*(y - y_c))) + 1/(1 + exp(-s2*(x - x_c))))
+        for x_co in np.arange(l,u,space):
+            for y_co in np.arange(l,u,space):
+                #print(l,u)
+                V_lg_m+= K/(exp(s1*(-r_c + ((x-x_co)**2 + (y-y_co)**2)**0.5)) + 1)
+        
+        return V_lg_m
+    
+    def dxpotential(x,y):
+        V_lg_m = K*(-s2*exp(s2*(x + x_c))/(exp(s2*(x + x_c)) + 1)**2 + s2*exp(-s2*(x - x_c))/(1 + exp(-s2*(x - x_c)))**2)
+        for x_co in np.arange(l,u,space):
+            for y_co in np.arange(l,u,space):
+                V_lg_m+= -K*s1*(1.0*x - 1.0*x_co)*((x - x_co)**2 + (y - y_co)**2)**(-0.5)*exp(s1*(-r_c + ((x - x_co)**2 + (y - y_co)**2)**0.5))/(exp(s1*(-r_c + ((x - x_co)**2 + (y - y_co)**2)**0.5)) + 1)**2
+         
+        return V_lg_m
+    
+    def dypotential(x,y):
+        V_lg_m = K*(-s2*exp(s2*(y + y_c))/(exp(s2*(y + y_c)) + 1)**2 + s2*exp(-s2*(y - y_c))/(1 + exp(-s2*(y - y_c)))**2)
+        for x_co in np.arange(l,u,space):
+            for y_co in np.arange(l,u,space):
+                V_lg_m+= -K*s1*(1.0*y - 1.0*y_co)*((x - x_co)**2 + (y - y_co)**2)**(-0.5)*exp(s1*(-r_c + ((x - x_co)**2 + (y - y_co)**2)**0.5))/(exp(s1*(-r_c + ((x - x_co)**2 + (y - y_co)**2)**0.5)) + 1)**2
+        return V_lg_m
+        
+    def ddpotential1(x,y):
+        V_lg_m = -K*s2**2*(exp(s2*(x + x_c))/(exp(s2*(x + x_c)) + 1)**2 - 2*exp(2*s2*(x + x_c))/(exp(s2*(x + x_c)) + 1)**3 + exp(-s2*(x - x_c))/(1 + exp(-s2*(x - x_c)))**2 - 2*exp(-2*s2*(x - x_c))/(1 + exp(-s2*(x - x_c)))**3)
+        for x_co in np.arange(l,u,space):
+            for y_co in np.arange(l,u,space):
+                V_lg_m+= -K*s1*(1.0*s1*(x - x_co)**2*((x - x_co)**2 + (y - y_co)**2)**(-1.0) - 2.0*s1*(x - x_co)**2*((x - x_co)**2 + (y - y_co)**2)**(-1.0)*exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))/(1 + exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))) - 1.0*(x - x_co)**2*((x - x_co)**2 + (y - y_co)**2)**(-1.5) + 1.0*((x - x_co)**2 + (y - y_co)**2)**(-0.5))*exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))/(1 + exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5)))**2
+        return V_lg_m
+        
+    def ddpotential2(x,y):
+        V_lg_m = 0.0
+        for x_co in np.arange(l,u,space):
+            for y_co in np.arange(l,u,space):
+                V_lg_m+= K*s1*(x - x_co)*(y - y_co)*(-1.0*s1*((x - x_co)**2 + (y - y_co)**2)**(-1.0) + 2.0*s1*((x - x_co)**2 + (y - y_co)**2)**(-1.0)*exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))/(1 + exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))) + 1.0*((x - x_co)**2 + (y - y_co)**2)**(-1.5))*exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))/(1 + exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5)))**2
+        return V_lg_m
+        
+    def ddpotential3(x,y):
+        V_lg_m = 0.0
+        for x_co in np.arange(l,u,space):
+            for y_co in np.arange(l,u,space):
+                V_lg_m+= K*s1*(x - x_co)*(y - y_co)*(-1.0*s1*((x - x_co)**2 + (y - y_co)**2)**(-1.0) + 2.0*s1*((x - x_co)**2 + (y - y_co)**2)**(-1.0)*exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))/(1 + exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))) + 1.0*((x - x_co)**2 + (y - y_co)**2)**(-1.5))*exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))/(1 + exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5)))**2
+        return V_lg_m
+    
+    def ddpotential4(x,y):
+        V_lg_m = -K*s2**2*(exp(s2*(y + y_c))/(exp(s2*(y + y_c)) + 1)**2 - 2*exp(2*s2*(y + y_c))/(exp(s2*(y + y_c)) + 1)**3 + exp(-s2*(y - y_c))/(1 + exp(-s2*(y - y_c)))**2 - 2*exp(-2*s2*(y - y_c))/(1 + exp(-s2*(y - y_c)))**3)
+        for x_co in np.arange(l,u,space):
+            for y_co in np.arange(l,u,space):
+                V_lg_m+= -K*s1*(1.0*s1*(y - y_co)**2*((x - x_co)**2 + (y - y_co)**2)**(-1.0) - 2.0*s1*(y - y_co)**2*((x - x_co)**2 + (y - y_co)**2)**(-1.0)*exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))/(1 + exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))) - 1.0*(y - y_co)**2*((x - x_co)**2 + (y - y_co)**2)**(-1.5) + 1.0*((x - x_co)**2 + (y - y_co)**2)**(-0.5))*exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5))/(1 + exp(-s1*(r_c - ((x - x_co)**2 + (y - y_co)**2)**0.5)))**2
+        return V_lg_m
+    
+elif(pot_code == 'V_sb'):
+    
+    L = 10.0  
+    s=2.0
+    r_c =5.0
+    K = 10.0
+    
+    def potential(x,y):
+        if(abs(x)<L/2):
+            return K*(1/(exp(s*(r_c + y)) + 1) + 1/(1 + exp(-s*(-r_c + y))))
+        else:
+            if(x<0):
+                r = ((x+L/2)**2 +y**2)**0.5
+                return K*(1/(1 + exp(-s*(-r_c + (y**2 + (L/2 + x)**2)**0.5))))
+            else:
+                r = ((x-L/2)**2 +y**2)**0.5
+                return K*(1/(1 + exp(-s*(-r_c + (y**2 + (-L/2 + x)**2)**0.5))))
             
+    def dxpotential(x,y):
+        #print('herhe')
+        if(abs(x)<L/2):
+            return 0.0
+        
+        else:
+            if(x<0):
+                return K*(s*(0.5*L + 1.0*x)*(y**2 + (L/2 + x)**2)**(-0.5)*exp(-s*(-r_c + (y**2 + (L/2 + x)**2)**0.5))/(1 + exp(-s*(-r_c + (y**2 + (L/2 + x)**2)**0.5)))**2)
+    
+            else:
+                r = ((x-L/2)**2 +y**2)**0.5
+                return K*(s*(-0.5*L + 1.0*x)*(y**2 + (-L/2 + x)**2)**(-0.5)*exp(-s*(-r_c + (y**2 + (-L/2 + x)**2)**0.5))/(1 + exp(-s*(-r_c + (y**2 + (-L/2 + x)**2)**0.5)))**2)
+            
+    def dypotential(x,y):
+        if(abs(x)<L/2):
+            return K*((-s*exp(s*(r_c + y))/(exp(s*(r_c + y)) + 1)**2 + s*exp(-s*(-r_c + y))/(1 + exp(-s*(-r_c + y)))**2))
+        
+        else:
+            if(x<0):
+                return K*(1.0*s*y*(y**2 + (L/2 + x)**2)**(-0.5)*exp(-s*(-r_c + (y**2 + (L/2 + x)**2)**0.5))/(1 + exp(-s*(-r_c + (y**2 + (L/2 + x)**2)**0.5)))**2)
+            else:
+                r = ((x-L/2)**2 +y**2)**0.5
+                return K*(1.0*s*y*(y**2 + (-L/2 + x)**2)**(-0.5)*exp(-s*(-r_c + (y**2 + (-L/2 + x)**2)**0.5))/(1 + exp(-s*(-r_c + (y**2 + (-L/2 + x)**2)**0.5)))**2)
+            
+    def ddpotential1(x,y):
+        if(abs(x)<L/2):
+            return 0.0
+        
+        else:
+            if(x<0):
+                return K*(s*(-s*(0.5*L + 1.0*x)**2*(y**2 + (L + 2*x)**2/4)**(-1.0) + 2*s*(0.5*L + 1.0*x)**2*(y**2 + (L + 2*x)**2/4)**(-1.0)*exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5)) + 1) - (0.5*L + 1.0*x)**2*(y**2 + (L + 2*x)**2/4)**(-1.5) + 1.0*(y**2 + (L + 2*x)**2/4)**(-0.5))*exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5)) + 1)**2) 
+            else:
+                r = ((x-L/2)**2 +y**2)**0.5
+                return K*(s*(-s*(0.5*L - 1.0*x)**2*(y**2 + (L - 2*x)**2/4)**(-1.0) + 2*s*(0.5*L - 1.0*x)**2*(y**2 + (L - 2*x)**2/4)**(-1.0)*exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5)) + 1) - (0.5*L - 1.0*x)**2*(y**2 + (L - 2*x)**2/4)**(-1.5) + 1.0*(y**2 + (L - 2*x)**2/4)**(-0.5))*exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5)) + 1)**2)
+            
+    def ddpotential2(x,y):
+        if(abs(x)<L/2):
+            return 0.0
+        
+        else:
+            if(x<0):
+                return K*(s*y*(0.5*L + 1.0*x)*(-1.0*s*(y**2 + (L + 2*x)**2/4)**(-1.0) + 2.0*s*(y**2 + (L + 2*x)**2/4)**(-1.0)*exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5)) + 1) - 1.0*(y**2 + (L + 2*x)**2/4)**(-1.5))*exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5)) + 1)**2)
+            else:
+                r = ((x-L/2)**2 +y**2)**0.5
+                return K*(s*y*(0.5*L - 1.0*x)*(1.0*s*(y**2 + (L - 2*x)**2/4)**(-1.0) - 2.0*s*(y**2 + (L - 2*x)**2/4)**(-1.0)*exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5)) + 1) + 1.0*(y**2 + (L - 2*x)**2/4)**(-1.5))*exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5)) + 1)**2)
+            
+    def ddpotential3(x,y):
+        if(abs(x)<L/2):
+            return 0.0
+        
+        else:
+            if(x<0):
+                return K*(s*y*(0.5*L + 1.0*x)*(-1.0*s*(y**2 + (L + 2*x)**2/4)**(-1.0) + 2.0*s*(y**2 + (L + 2*x)**2/4)**(-1.0)*exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5)) + 1) - 1.0*(y**2 + (L + 2*x)**2/4)**(-1.5))*exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5)) + 1)**2)
+            else:
+                r = ((x-L/2)**2 +y**2)**0.5
+                return K*(s*y*(0.5*L - 1.0*x)*(1.0*s*(y**2 + (L - 2*x)**2/4)**(-1.0) - 2.0*s*(y**2 + (L - 2*x)**2/4)**(-1.0)*exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5)) + 1) + 1.0*(y**2 + (L - 2*x)**2/4)**(-1.5))*exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5)) + 1)**2)
+            
+    def ddpotential4(x,y):
+        if(abs(x)<L/2):
+            return K*(s**2*(-exp(s*(r_c + y))/(exp(s*(r_c + y)) + 1)**2 + 2*exp(2*s*(r_c + y))/(exp(s*(r_c + y)) + 1)**3 - exp(s*(r_c - y))/(exp(s*(r_c - y)) + 1)**2 + 2*exp(2*s*(r_c - y))/(exp(s*(r_c - y)) + 1)**3))
+
+        else:
+            if(x<0):
+                return K*(s*(-1.0*s*y**2*(y**2 + (L + 2*x)**2/4)**(-1.0) + 2.0*s*y**2*(y**2 + (L + 2*x)**2/4)**(-1.0)*exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5)) + 1) - 1.0*y**2*(y**2 + (L + 2*x)**2/4)**(-1.5) + 1.0*(y**2 + (L + 2*x)**2/4)**(-0.5))*exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L + 2*x)**2/4)**0.5)) + 1)**2)
+            else:
+                r = ((x-L/2)**2 +y**2)**0.5
+                return K*(s*(-1.0*s*y**2*(y**2 + (L - 2*x)**2/4)**(-1.0) + 2.0*s*y**2*(y**2 + (L - 2*x)**2/4)**(-1.0)*exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5)) + 1) - 1.0*y**2*(y**2 + (L - 2*x)**2/4)**(-1.5) + 1.0*(y**2 + (L - 2*x)**2/4)**(-0.5))*exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5))/(exp(s*(r_c - (y**2 + (L - 2*x)**2/4)**0.5)) + 1)**2)
+ 

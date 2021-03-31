@@ -23,13 +23,13 @@ parr = []
 energyarr =[]
 global count
 count=0
-def time_evolve_nc(CMD,Matsubara,M,swarmobj,dpotential,deltat,T,rng):
+def time_evolve_nc(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,T,rng):
     #mem = psutil.virtual_memory()[3]
     #print( 'i memory prev',psutil.virtual_memory()[3]-mem, psutil.virtual_memory()[2])
     t=0.0
     #Velocity_verlet.set_therm_param(deltat,2*MD_System.omega)
     while (abs(t-T)>1e-4):
-        vv_step_nc_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,rng)
+        vv_step_nc_thermostat(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,rng)
         t+=deltat
     #print( ' memory after',psutil.virtual_memory()[3]-mem, psutil.virtual_memory()[2])    
 
@@ -58,7 +58,7 @@ def time_evolve_qcmd_therm(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat
         vv_step_qcmd_thermostat(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng)
         t+=deltat
         
-def time_evolve(CMD,Matsubara,M,swarmobj,dpotential,deltat,T):
+def time_evolve(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,T):
     
     """
     This function time evolves the given dynamical quantities of the system
@@ -79,7 +79,7 @@ def time_evolve(CMD,Matsubara,M,swarmobj,dpotential,deltat,T):
     count=0
     
     while (abs(t-T)>2e-3):
-        vv_step(CMD,Matsubara,M,swarmobj,dpotential,deltat)
+        vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat)
         #print(swarmobj.q)
         t+=deltat
         count+=1

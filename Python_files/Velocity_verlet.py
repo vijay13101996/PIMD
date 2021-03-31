@@ -12,39 +12,12 @@ from copy import deepcopy,copy
 from numpy import linalg as LA
 from numpy.fft import fft,ifft
 from multiprocessing import Process
-#from MD_System import gamma,beta,w_n,n_beads,w_arr
 from scipy import fftpack
 import scipy 
 import MD_System
 import psutil
-#import MD_Simulation
+import sys
 
-global count 
-count =0 
-
-
-if(0):
-    w_arr = MD_System.w_arr[1:]
-    w_arr_scaled = MD_System.w_arr_scaled[1:]
-    print('w_arr vv',len(w_arr),w_arr)
-    print('w_arr_scaled',len(w_arr_scaled))
-    cosw_arr = None 
-    sinw_arr = None 
-
-ft_rearrange= np.ones(MD_System.n_beads)*(-(2.0/MD_System.n_beads)**0.5)
-ft_rearrange[0] = 1/MD_System.n_beads**0.5
-
-print('ft_rearrange',ft_rearrange)
-
-if(MD_System.n_beads%2 == 0):
-    ft_rearrange[MD_System.n_beads-1]= 1/MD_System.n_beads**0.5
-#~ Find a better way to define the cosines and sines.
-
-quasi_centroid_x=[]
-quasi_centroid_y=[]
-
-qcx =[]
-qcy =[]
 def fourier_transform(swarmobj):
     swarmobj.q = scipy.fftpack.rfft(swarmobj.q,axis=2)
     swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)
@@ -59,8 +32,21 @@ def normal_mode_force(swarmobj,dpotential):
     dpot_tilde = scipy.fftpack.rfft(dpot,axis=2)#/MD_System.n_beads
     return dpot_tilde
  
+def B_step_pot(swarmobj,dpotential,deltat): 
+    swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)
 
-count=0      
+def O_step(swarmobj,Matsubara,rng):
+    global c1, c2
+    if(Matsubara==1):
+        gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))
+        swarmobj.p = c1*swarmobj.p + swarmobj.sm*(1/swarmobj.beta)**0.5*c2*gauss_rand     
+    else:
+        swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*swarmobj.ft_rearrange
+        gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))
+        swarmobj.p = c1*swarmobj.p + swarmobj.sm*(1/(swarmobj.beta_n))**0.5*c2*gauss_rand 
+        swarmobj.p*=(1/swarmobj.ft_rearrange)
+        swarmobj.p = scipy.fftpack.irfft(swarmobj.p,axis=2) 
+    
 def vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat):
     
     """
@@ -73,144 +59,202 @@ def vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat):
         deltat : Time step size
     """
         
-#-------------------------------------------------------------------
-#    swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)
-#    swarmobj.q += (deltat/swarmobj.m)*swarmobj.p
-#    swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)
-#------------------------------------------------------------------
-    if(0): 
-        cosw_arr = np.cos(w_arr*deltat)
-        sinw_arr = np.sin(w_arr*deltat)
-    
-    if(0):  #ACMD
-        cosw_arr = np.cos(w_arr_scaled*deltat)
-        sinw_arr = np.sin(w_arr_scaled*deltat)   ## BEWARE WHEN YOU MAKE ANY CHANGES!
-        #pot_factor = 1/MD_System.n_beads
-    
-    swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)#swarmobj.sys_grad_pot()
-    
-    if(CMD==1):
-        fourier_transform(swarmobj)
-        swarmobj.p[:,:,0] = 0.0
-        inv_fourier_transform(swarmobj)    
+    if(Matsubara==1):
+        swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)
+        swarmobj.q += (deltat/swarmobj.m)*swarmobj.p
+        swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)   
+     
+    else:
+        B_step_pot(swarmobj,dpotential,deltat)
+        RSPA(ACMD,CMD,swarmobj,deltat) 
+        B_step_pot(swarmobj,dpotential,deltat)
 
-#    swarmobj.p -= (deltat/2.0)*swarmobj.sys_grad_ring_pot_coord()
-#    swarmobj.q += (deltat/swarmobj.m)*swarmobj.p
-#    swarmobj.p -= (deltat/2.0)*swarmobj.sys_grad_ring_pot_coord()
-    
+           
+def RSPA(ACMD,CMD,swarmobj,deltat):
     fourier_transform(swarmobj)
     
-    if(1):
-        if(CMD!=1):
-            swarmobj.q[:,:,0]+=(deltat/swarmobj.m)*swarmobj.p[:,:,0]
-             
-        
-        temp = swarmobj.p[:,:,1:].copy()
-        
-        if(ACMD==0):
-            print('ACMD')
-            swarmobj.p[:,:,1:] = MD_System.cosw_arr*swarmobj.p[:,:,1:] \
-                               - swarmobj.m*w_arr*MD_System.sinw_arr*swarmobj.q[:,:,1:]
-            swarmobj.q[:,:,1:] = MD_System.sinw_arr*temp/(swarmobj.m*w_arr) \
-                                + MD_System.cosw_arr*swarmobj.q[:,:,1:]
-        if(ACMD==1):
-            #print( 'mass factor', swarmobj.m*MD_System.mass_factor*MD_System.w_arr_scaled**2, swarmobj.m*MD_System.w_arr**2)
-            #print('coswarr', (MD_System.cosw_arr),np.cos(MD_System.w_arr_scaled))
-            swarmobj.p[:,:,1:] = MD_System.cosw_arr*swarmobj.p[:,:,1:] \
-                               - swarmobj.m*MD_System.mass_factor*MD_System.w_arr_scaled*MD_System.sinw_arr*swarmobj.q[:,:,1:]
-            swarmobj.q[:,:,1:] = MD_System.sinw_arr*temp/(swarmobj.m*MD_System.mass_factor*MD_System.w_arr_scaled) \
-                                + MD_System.cosw_arr*swarmobj.q[:,:,1:]
-                        
-        if(Matsubara==1):
-            
-            swarmobj.q[:,:,M:]=0.0
-            swarmobj.p[:,:,M:]=0.0
-            
-#    swarmobj.p -= (deltat/2.0)*swarmobj.sys_grad_ring_pot()
-#    swarmobj.q += (deltat/swarmobj.m)*swarmobj.p  # Position update step
-#    swarmobj.p -= (deltat/2.0)*swarmobj.sys_grad_ring_pot()                   
-    
-    inv_fourier_transform(swarmobj)
-    
-    swarmobj.p -= (deltat/2.0)*dpotential(swarmobj.q)#*swarmobj.sys_grad_pot()
-   
-    if(CMD==1):
-        fourier_transform(swarmobj)
-        swarmobj.p[:,:,0] = 0.0
-        inv_fourier_transform(swarmobj)
-
-    if(0):
-        global count
-        count+=1
-        qcx.append(np.mean(swarmobj.q[0][0]))
-        qcy.append(np.mean(swarmobj.q[0][1]))
-        
-        if(count%1000==0):
-            print('centroid')
-            plt.scatter(qcx,qcy)
-            plt.plot(qcx,qcy)
-            plt.show()
-            
-def RSPA(swarmobj,deltat):
-    fourier_transform(swarmobj)
-    CMD=0
     if(CMD!=1):
-        swarmobj.q[:,:,0]+=(deltat/swarmobj.m)*swarmobj.p[:,:,0]
-    
-    
+            swarmobj.q[:,:,0]+=(deltat/swarmobj.m)*swarmobj.p[:,:,0]
+              
     temp = swarmobj.p[:,:,1:].copy()
     
-    if(1):
-        swarmobj.p[:,:,1:] = cosw_arr*swarmobj.p[:,:,1:] \
-                           - swarmobj.m*w_arr*sinw_arr*swarmobj.q[:,:,1:]
-        swarmobj.q[:,:,1:] = sinw_arr*temp/(swarmobj.m*w_arr) \
-                            + cosw_arr*swarmobj.q[:,:,1:]
-    if(0):
-        swarmobj.p[:,:,1:] = cosw_arr*swarmobj.p[:,:,1:] \
-                           - swarmobj.m*mass_factor*w_arr_scaled*sinw_arr*swarmobj.q[:,:,1:]
-        swarmobj.q[:,:,1:] = sinw_arr*temp/(swarmobj.m*mass_factor*w_arr_scaled) \
-                            + cosw_arr*swarmobj.q[:,:,1:]
-                        
-    
+    if(ACMD==0):
+        swarmobj.p[:,:,1:] = swarmobj.cosw_arr*swarmobj.p[:,:,1:] \
+                           - swarmobj.m*swarmobj.w_arr*swarmobj.sinw_arr*swarmobj.q[:,:,1:]
+        swarmobj.q[:,:,1:] = swarmobj.sinw_arr*temp/(swarmobj.m*swarmobj.w_arr) \
+                            + swarmobj.cosw_arr*swarmobj.q[:,:,1:]
+    if(ACMD==1): 
+        swarmobj.p[:,:,1:] = swarmobj.cosw_arr*swarmobj.p[:,:,1:] \
+                           - swarmobj.m*swarmobj.mass_factor*swarmobj.w_arr_scaled*swarmobj.sinw_arr*swarmobj.q[:,:,1:]
+        swarmobj.q[:,:,1:] = swarmobj.sinw_arr*temp/(swarmobj.m*swarmobj.mass_factor*swarmobj.w_arr_scaled) \
+                            + swarmobj.cosw_arr*swarmobj.q[:,:,1:]
+                    
     inv_fourier_transform(swarmobj)
   
 def adiabatize_p(swarmobj,deltat):
     fourier_transform(swarmobj)
-    mass_factor = (w_arr*MD_System.beta_n/(MD_System.omega))**2 #*len(swarmobj.q[0,0,:])
-    mass_factor = np.insert(mass_factor,0,1/MD_System.omega**2)
+    mass_factor = (w_arr*swarmobj.beta_n/(swarmobj.omega))**2 #*len(swarmobj.q[0,0,:])
+    mass_factor = np.insert(mass_factor,0,1/swarmobj.omega**2)
     #swarmobj.p[:,:,1:]+= -(deltat/2)*swarmobj.sys_grad_ring_pot()[:,:,1:]*mass_factor
     swarmobj.p+= -(deltat/2)*swarmobj.sys_grad_ring_pot()*mass_factor
     inv_fourier_transform(swarmobj)
  
 def adiabatize_q(swarmobj,deltat):
     fourier_transform(swarmobj)
-    mass_factor = (w_arr*MD_System.beta_n/(MD_System.omega))**2 #*len(swarmobj.q[0,0,:])
-    mass_factor = np.insert(mass_factor,0,1/MD_System.omega**2)
+    mass_factor = (w_arr*swarmobj.beta_n/(swarmobj.omega))**2 #*len(swarmobj.q[0,0,:])
+    mass_factor = np.insert(mass_factor,0,1/swarmobj.omega**2)
     #swarmobj.q[:,:,0]+= (deltat/swarmobj.m)*swarmobj.p[:,:,0]
     #swarmobj.q[:,:,1:]+= (deltat/(swarmobj.m*mass_factor))*swarmobj.p[:,:,1:]
     swarmobj.q+= (deltat/(swarmobj.m*mass_factor))*swarmobj.p
     inv_fourier_transform(swarmobj)
+
+def U_update(U,Q):
+    r_arr = eval_xi1(Q)
+    x = Q/r_arr[:,None]
+    
+    z_prev = U[...,:,2]
+    y = np.cross(z_prev,x,axisa=1,axisb=1)
+    y/= np.linalg.norm(y,axis=1)[:,None]
+
+    z = np.cross(x,y,axisa=1,axisb=1)
+    z/= np.linalg.norm(z,axis=1)[:,None]
+
+    U[...,:,0] = x
+    U[...,:,1] = y
+    U[...,:,2] = z    # CHECK x,y conventions!
+    
+def eval_xi1(Q):
+    return np.sum(Q**2, axis=1)**0.5
+
+def qcrot_mat_mul(U,Q):
+    return np.matmul(U,Q) 
+
+def dxi1(UQ_arr): 
+    xi1 = eval_xi1(UQ_arr)
+    xi1 = xi1[:,np.newaxis]
+    xi1 = np.repeat(xi1,3,axis=1)
+    return UQ_arr/xi1
+
+def sigma_xi1(Q,R):
+    temp = np.mean(eval_xi1(Q),axis=1)
+    return temp - R
+
+def dsigma_xi1(Q,U):
+    UQ = qcrot_mat_mul(U,Q) 
+    return np.nan_to_num(np.matmul(np.transpose(U,axes=[0,2,1]), dxi1(UQ))) ### Check for consistency!
+
+def dxi2(UQ_arr):
+    xi1 = eval_xi1(UQ_arr)
+    x_arr = UQ_arr[...,0,:]
+    y_arr = UQ_arr[...,1,:]
+    z_arr = UQ_arr[...,2,:]
+    
+    temp = [-x_arr*y_arr/xi1**3,(x_arr**2+z_arr**2)/xi1**3,-y_arr*z_arr/xi1**3]
+    ret = np.transpose(temp,axes=[1,0,2])  
+    return ret 
+
+def sigma_xi2(Q,U):
+    xi1 = eval_xi1(Q)
+    UQ = qcrot_mat_mul(U,Q)
+    y_arr = UQ[...,1,:]     
+    return np.mean(y_arr/xi1,axis=1)
+
+def dsigma_xi2(Q,U):
+    UQ = qcrot_mat_mul(U,Q) 
+    return np.nan_to_num(np.matmul(np.transpose(U,axes=[0,2,1]), dxi2(UQ))) ### Check for consistency!
+
+def dxi3(UQ_arr):
+    xi1 = eval_xi1(UQ_arr)
+    x_arr = UQ_arr[...,0,:]
+    y_arr = UQ_arr[...,1,:]
+    z_arr = UQ_arr[...,2,:]
+ 
+    temp = [-x_arr*z_arr/xi1**3,-y_arr*z_arr/xi1**3,(x_arr**2+y_arr**2)/xi1**3]
+    ret = np.transpose(temp,axes=[1,0,2])  
+    return ret
+
+def sigma_xi3(Q,U):
+    xi1 = eval_xi1(Q)
+    UQ = qcrot_mat_mul(U,Q)
+    z_arr = UQ[...,1,:]
+    return np.mean(z_arr/xi1,axis=1)
+
+def dsigma_xi3(Q,U):
+    UQ = qcrot_mat_mul(U,Q) 
+    return np.nan_to_num(np.matmul(np.transpose(U,axes=[0,2,1]), dxi3(UQ))) ### Check for consistency!
+
+def BAQC_SHAKE(swarmobj,q0,deltat,U,lambda_curr,R):
+    q_d=swarmobj.q.copy()
+    count=0
+    while((abs(sigma_xi1(q_d,R)) > 5e-4).any() or (abs(sigma_xi2(q_d,U)) > 5e-4).any() or (abs(sigma_xi3(q_d,U)) > 5e-4).any()): 
+        
+        q_d = swarmobj.q + (lambda_curr[:,0, None, None]*(dsigma_xi1(q0,U)) +  lambda_curr[:,1, None, None]*(dsigma_xi2(q0,U)) + lambda_curr[:,2, None, None]*(dsigma_xi3(q0,U)))/swarmobj.m
+        
+        A = np.zeros((len(swarmobj.q),3,3))
+        B = np.zeros((len(swarmobj.q),3))
+
+        dsigma_arr = [dsigma_xi1,dsigma_xi2, dsigma_xi3]
+        for i in range(3):
+            for j in range(3):
+                A[:,i,j] = np.sum(np.sum(dsigma_arr[i](q_d,U)*dsigma_arr[j](q0,U),axis = 1), axis=1)
+        
+        B[:,0] = -sigma_xi1(q_d,R)
+        B[:,1] = -sigma_xi2(q_d,U)
+        B[:,2] = -sigma_xi3(q_d,U)     ## CHECK!
+       
+        dlambda = np.linalg.solve(A,B)
+        if ((np.linalg.cond(A) > 10.0).any()):#sys.float_info.epsilon
+            print('shake A', np.linalg.cond(A))
+            break
+        lambda_curr+=dlambda
+        count+=1
+
+        if(count>1e5):
+            print('count exceeded')
+            print(np.where(abs(sigma(q_d,R))>1e-2  ))
+            break
+     
+    swarmobj.q+= (lambda_curr[:,0,None,None]*(dsigma_xi1(q0,U)) +  lambda_curr[:,1,None,None]*(dsigma_xi2(q0,U)) + lambda_curr[:,2,None,None]*(dsigma_xi3(q0,U)))/swarmobj.m  
+    swarmobj.p+= (1/deltat)*(lambda_curr[:,0,None,None]*(dsigma_xi1(q0,U)) +  lambda_curr[:,1,None,None]*(dsigma_xi2(q0,U)) + lambda_curr[:,2,None,None]*(dsigma_xi3(q0,U)))
+    ## ALRIGHT!
+
+ 
+def BAQC_RATTLE(q,p,U):
+    #print('rattle')
+    A = np.zeros((len(q),3,3))
+    B = np.zeros((len(q),3))
+
+    dsigma_arr = [dsigma_xi1,dsigma_xi2, dsigma_xi3]
+    for i in range(3):
+        for j in range(3):
+            A[:,i,j] = np.sum(np.sum(dsigma_arr[i](q,U)*dsigma_arr[j](q,U),axis = 1), axis=1)
+
+    B[:,0] = -np.sum(np.sum(dsigma_arr[0](q,U)*p,axis=1),axis=1)
+    B[:,1] = -np.sum(np.sum(dsigma_arr[1](q,U)*p,axis=1),axis=1)
+    B[:,2] = -np.sum(np.sum(dsigma_arr[2](q,U)*p,axis=1),axis=1)         ## CHECK!
+          
+    myu = np.linalg.solve(A,B)
+    #print('cond', np.linalg.cond(A),B)
+    if ((np.linalg.cond(A) >20.0).any()):#sys.float_info.epsilon
+        print('rattle A', np.linalg.cond(A), dsigma_xi1(q,U))
+        sys.exit(0)        
+    myu = np.nan_to_num(myu)
+    p += myu[:,0, None, None]*dsigma_xi1(q,U) + myu[:,1, None, None]*dsigma_xi2(q,U) + myu[:,2, None, None]*dsigma_xi3(q,U)  ## ALRIGHT!
     
 def sigma(Q,R):
     x_arr = Q[...,0,:]
     y_arr = Q[...,1,:]
-    temp = np.sum((1/len(x_arr[0]))*(abs(x_arr**2 + y_arr**2)**0.5), axis=1)
-    #print(Q)
-    #print('new',x_arr)
-    #print('y',y_arr)
-    #print('hereh',x_arr[0])#*(x_arr**2 + y_arr**2)**0.5)
-    return temp-R##x**2+y**2-1
+    temp = np.sum((1/len(x_arr[0]))*(abs(x_arr**2 + y_arr**2)**0.5), axis=1) 
+    return temp-R
 
 def dsigma(Q):
     r_arr = (1/len(Q[0,0,:]))*abs((Q[...,0,:]**2 + Q[...,1,:]**2)**0.5)
     r_arr = r_arr[:,np.newaxis]
     r_arr = np.repeat(r_arr,2,axis=1)
     ret = np.nan_to_num(Q/r_arr)
-    return ret#Q/r_arr#np.array([2*x,2*y])
-
+    return ret
 
 def SHAKE(swarmobj,q0,deltat,lambda_curr,R):
-    #print('R',R)
     q_d=swarmobj.q.copy()
     count=0 
     while((abs(sigma(q_d,R)) > 5e-4).any()): 
@@ -220,13 +264,8 @@ def SHAKE(swarmobj,q0,deltat,lambda_curr,R):
         denom = np.sum(denom,axis=1)
         
         if((abs(denom)<1e-3).any()):
-            print('start')
-            #print(dsigma(q_d),dsigma(q0))
-            #print(np.sum(dsigma(q_d)*dsigma(q0),axis = 1))
-            print('denom',denom[abs(denom)<1e-3])
-            #print('unstable',np.sum(q_d,axis=2))
-            #print('unstable init', np.sum(q0,axis=2))
-            #print('in-sigma',(abs(sigma(q_d,1.0))), q_d)
+            print('start')    
+            print('denom',denom[abs(denom)<1e-3]) 
             print('end')
             #break  
         dlambda = -swarmobj.m*sigma(q_d,R)/denom 
@@ -236,14 +275,15 @@ def SHAKE(swarmobj,q0,deltat,lambda_curr,R):
         count+=1
         
         if(count>1e6):
-            print('count exceeded')#,(abs(sigma(q_d,R)))[abs(sigma(q_d,R))>1e-2]  )
+            print('count exceeded')
             print(np.where(abs(sigma(q_d,R))>1e-2  ))
             break
-        
-    #print('sigma',abs(sigma(q_d,1.0))) 
-    x_arr = q_d[...,0,:]
-    y_arr = q_d[...,1,:]
-    temp = np.sum((1/len(x_arr[0]))*(abs(x_arr**2 + y_arr**2))**0.5, axis=1)
+     
+    if(0):
+        x_arr = q_d[...,0,:]
+        y_arr = q_d[...,1,:]
+        temp = np.sum((1/len(x_arr[0]))*(abs(x_arr**2 + y_arr**2))**0.5, axis=1)
+    
     swarmobj.q+= (1/swarmobj.m)*lambda_curr*dsigma(q0)
     swarmobj.p+= (1/deltat)*lambda_curr*dsigma(q0)
     
@@ -279,6 +319,49 @@ def dpotential_qcentroid(QC_q,swarmobj,dpotential):
     ret = (QC_q/qc_norm)*radial_force    # add minus if reqd.
     return ret
 
+def M_matrix_bead(UQ):
+    xi1 = eval_xi1(UQ)
+    x_arr = UQ[...,0,:]
+    y_arr = UQ[...,1,:]
+    z_arr = UQ[...,2,:]
+
+    M_arr = np.zeros((len(UQ),3,3,len(UQ[0,0,:])))  # There will be a problem here!
+    print('hereh',np.shape([x_arr/xi1,y_arr/xi1,z_arr/xi1]), np.shape(M_arr[...,0,:]))
+    M_arr[...,0,:] = np.transpose([x_arr/xi1,y_arr/xi1,z_arr/xi1],axes = [1,0,2])
+    M_arr[...,1,:] = np.transpose([-y_arr*xi1/x_arr, xi1, 0.0*x_arr], axes =[1,0,2])
+    M_arr[...,2,:] = np.transpose([-z_arr*xi1/x_arr, 0.0*x_arr, xi1], axes = [1,0,2])
+    
+    print(np.shape(M_arr))
+    return M_arr
+    
+def M_matrix_BAQC(UQ):
+    xi1 = eval_xi1(UQ)
+    x_arr = UQ[...,0]
+    y_arr = UQ[...,1]
+    z_arr = UQ[...,2]
+
+    M_arr = np.zeros((len(UQ),3,3))
+    print('hereh',np.shape([x_arr/xi1,y_arr/xi1,z_arr/xi1]), np.shape(M_arr[...,0,:]))
+    M_arr[...,0] = np.transpose([x_arr/xi1,y_arr/xi1,z_arr/xi1])
+    M_arr[...,1] = np.transpose([-y_arr*xi1/x_arr, xi1, 0.0*x_arr])
+    M_arr[...,2] = np.transpose([-z_arr*xi1/x_arr, 0.0*x_arr, xi1])
+    
+    print(np.shape(M_arr))
+    return M_arr
+
+def dpotential_baqcentroid(U,BAQC_q,swarmobj,dpotential):
+    bead_fcart = np.matmul(U,dpotential(swarmobj.q))
+    UQ_bead = np.matmul(U,swarmobj.q)
+    #print('shape0',np.shape(UQ_bead),np.shape(bead_fcart))
+    bead_fcart = np.einsum('ijkl,ijl->ijl', M_matrix_bead(UQ_bead),bead_fcart)
+    #print('shape1',np.shape(bead_fcart))
+    bead_fcart_avg = np.sum(bead_fcart,axis=2)/swarmobj.n_beads
+    MU = M_matrix_BAQC(np.einsum('ijk,ij->ij',U,BAQC_q))
+    MU_inv = np.linalg.inv(MU)
+
+    ret = np.einsum('ijk,ij->ij',MU_inv,bead_fcart_avg)
+    return ret
+
 def vv_step_constrained(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,adiabatic): 
     q0 = swarmobj.q.copy()
     
@@ -289,7 +372,7 @@ def vv_step_constrained(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,ad
     if(adiabatic==1):
         adiabatize_p(swarmobj,deltat)
     else:
-        swarmobj.p+= -(deltat/2)*MD_System.dpotential_ring(swarmobj)
+        swarmobj.p+= -(deltat/2)*swarmobj.dpotential_ring()
     RATTLE(swarmobj.q,swarmobj.p)
     
     if(QCMD!=1):
@@ -328,6 +411,44 @@ def vv_step_constrained(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,ad
     #print(radius,x_c,y_c)
     #plt.plot(radius*np.cos(theta_arr),radius*np.sin(theta_arr))#, fill=False)
     #plt.show()
+ 
+def vv_step_BAQC_constrained(BAQCMD,swarmobj,BAQC_q,BAQC_p,U,lambda_curr,dpotential,deltat,adiabatic): 
+    q0 = swarmobj.q.copy()
+    
+    if(BAQCMD!=1):
+        BAQC_p+= -(deltat/2)*dpotential_baqcentroid(BAQC_q,swarmobj,dpotential)
+    swarmobj.p+= -(deltat/2)*dpotential(swarmobj.q)
+    
+    if(adiabatic==1):
+        BA_adiabatize_p(swarmobj,deltat)
+    else:
+        swarmobj.p+= -(deltat/2)*swarmobj.dpotential_ring()
+    BAQC_RATTLE(swarmobj.q,swarmobj.p,U)
+    
+    if(BAQCMD!=1):
+        BAQC_q+= (deltat/swarmobj.m)*BAQC_p
+    
+    if(adiabatic==1):
+        BA_adiabatize_q(swarmobj,deltat)
+    else:
+        swarmobj.q+= (deltat/swarmobj.m)*swarmobj.p
+        
+    qc_norm = (BAQC_q[:,0]**2 + BAQC_q[:,1]**2 + BAQC_q[:,2]**2)**0.5 ## Use linalg.norm or np.sum
+    
+    BAQC_SHAKE(swarmobj,q0,deltat,U,lambda_curr,qc_norm)
+   
+    U_update(U,BAQC_q)
+
+    if(BAQCMD!=1):
+        BAQC_p+= -(deltat/2)*dpotential_baqcentroid(BAQC_q,swarmobj,dpotential)
+    swarmobj.p+= -(deltat/2)*dpotential(swarmobj.q) 
+    
+    if(adiabatic==1):
+        BA_adiabatize_p(swarmobj,deltat)
+    else:
+        swarmobj.p+= -(deltat/2)*swarmobj.dpotential_ring()
+    
+    BAQC_RATTLE(swarmobj.q,swarmobj.p,U)
     
 def vv_step_qcmd_adiabatize(swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,rng):    
     
@@ -397,6 +518,29 @@ def vv_step_qcmd_thermostat(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,delta
     swarmobj.p = scipy.fftpack.irfft(swarmobj.p,axis=2)
     
     RATTLE(swarmobj.q,swarmobj.p)
+
+def vv_step_baqcmd_thermostat(BAQCMD,swarmobj,BAQC_q,BAQC_p,U,lambda_curr,dpotential,deltat,rng):
+    global c1,c2
+    gamma_qc =1.0
+    c1_Q = np.exp(-(deltat/2.0)*gamma_qc)
+    c2_Q = (1-c1_Q**2)**0.5 
+     
+    rand_gaus = rng.normal(0.0,1.0,np.shape(BAQC_q))
+    if(BAQCMD!=1):
+        BAQC_p[:] = c1_Q*BAQC_p + swarmobj.sm*(1/(swarmobj.beta))**0.5*c2_Q*rand_gaus
+    
+    O_step(swarmobj,Matsubara,rng)
+    BAQC_RATTLE(swarmobj.q,swarmobj.p,U)
+    
+    vv_step_BAQC_constrained(BAQCMD,swarmobj,BAQC_q,BAQC_p,U,lambda_curr,dpotential,deltat,0)
+    
+    rand_gaus = rng.normal(0.0,1.0,np.shape(BAQC_q))
+    if(BAQCMD!=1):
+        BAQC_p[:] = c1_Q*BAQC_p + swarmobj.sm*(1/(swarmobj.beta))**0.5*c2_Q*rand_gaus
+    
+    O_step(swarmobj,Matsubara,rng) 
+    BAQC_RATTLE(swarmobj.q,swarmobj.p,U)
+  
     
 def vv_step_nc_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,rng):
     global c1,c2
@@ -425,7 +569,6 @@ def vv_step_nc_thermostat(CMD,Matsubara,M,swarmobj,dpotential,deltat,rng):
  
 def set_therm_param(deltat,gamma):
     global c1,c2
-    print('gamma called',gamma)
     c1 = np.exp(-(deltat/2.0)*gamma)
     c2 = (1-c1**2)**0.5
     
@@ -450,14 +593,15 @@ def vv_step_thermostat(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rn
     
          # Can be passed as an argument if reqd.
 
+    
     etherm[0] += swarmobj.sys_kin()
+    O_step(swarmobj,Matsubara,rng)
+    etherm[0] -= swarmobj.sys_kin()
     
-    swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*ft_rearrange
-    gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))
-    swarmobj.p = c1*swarmobj.p + swarmobj.sm*(1/(MD_System.beta_n))**0.5*c2*gauss_rand 
-    swarmobj.p*=(1/ft_rearrange)
-    swarmobj.p = scipy.fftpack.irfft(swarmobj.p,axis=2) #MD_System.n_beads
+    vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat)
     
+    etherm[0] += swarmobj.sys_kin()
+    O_step(swarmobj,Matsubara,rng) 
     etherm[0] -= swarmobj.sys_kin()
     
     #c1,c2 and mass might have to be vectorized at some point. Do take note!
@@ -468,120 +612,3 @@ def vv_step_thermostat(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rn
        #  Be extra careful in the above step when you vectorize the code.
     
    
-    vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat)
-   
-    etherm[0] += swarmobj.sys_kin()
-    
-    swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*ft_rearrange
-    gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))         
-    swarmobj.p = c1*swarmobj.p + swarmobj.sm*(1/(MD_System.beta_n))**0.5*c2*gauss_rand 
-    swarmobj.p*=(1/ft_rearrange)
-    swarmobj.p = scipy.fftpack.irfft(swarmobj.p,axis=2)#MD_System.n_beads
-    
-    etherm[0] -= swarmobj.sys_kin()
-    
-#==================================================STRAY CODE
-    
-#    global count
-#    
-#    swarmobj.p -= (deltat/2.0)*swarmobj.sys_grad_pot()
-#    
-#    
-#        
-#    swarmobj.p = np.fft.rfft(swarmobj.p,n_beads,axis=2)
-#    swarmobj.q = np.fft.rfft(swarmobj.q,n_beads,axis=2)
-#    
-#    
-#    
-#    swarmobj.q[:,:,0] += (deltat/swarmobj.m)*swarmobj.p[:,:,0]
-#    
-#    temp = swarmobj.p[:,:,1:].copy()
-#    swarmobj.p[:,:,1:] = np.cos(w_arr*deltat)*swarmobj.p[:,:,1:] \
-#                   - swarmobj.m*w_arr*np.sin(w_arr*deltat)*swarmobj.q[:,:,1:]
-#    
-#    swarmobj.q[:,:,1:] = np.sin(w_arr*deltat)*temp/(swarmobj.m*w_arr) \
-#                    + np.cos(w_arr*deltat)*swarmobj.q[:,:,1:]
-##    
-#    
-#    swarmobj.p = np.fft.irfft(swarmobj.p,n_beads,axis=2)
-#    swarmobj.q = np.fft.irfft(swarmobj.q,n_beads,axis=2)                
-#        
-#    swarmobj.p -= (deltat/2.0)*swarmobj.sys_grad_pot()
-#    
-#    count+=1
-# -------------------------------------------------------------------  
-    #    print(swarmobj.sys_kin()+swarmobj.sys_pot())
-#    cosw_arr = np.cos(w_arr*deltat)
-#    sinw_arr = np.sin(w_arr*deltat)
-#    
-#    swarmobj.p -= (deltat/2.0)*swarmobj.sys_grad_pot()
-#    
-#    swarmobj.q = scipy.fftpack.rfft(swarmobj.q,axis=2)
-#    swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)
-#    
-#    swarmobj.q[:,:,0] += (deltat/swarmobj.m)*swarmobj.p[:,:,0]
-#    temp = swarmobj.p[:,:,1:].copy()
-#    swarmobj.p[:,:,1:] = cosw_arr*swarmobj.p[:,:,1:] \
-#                   - swarmobj.m*w_arr*sinw_arr*swarmobj.q[:,:,1:]
-#    swarmobj.q[:,:,1:] = sinw_arr*temp/(swarmobj.m*w_arr) \
-#                    + cosw_arr*swarmobj.q[:,:,1:]
-#                    
-#    swarmobj.q = scipy.fftpack.irfft(swarmobj.q,axis=2)
-#    swarmobj.p = scipy.fftpack.irfft(swarmobj.p,axis=2)
-#    
-#    swarmobj.p -= (deltat/2.0)*swarmobj.sys_grad_pot()
-#    
-#    
-#------------------------------------------------------------------- 
-    
-#Transf = np.zeros((n_beads,n_beads))
-#
-#for l in range(n_beads):
-#    for n in range(int(n_beads/2)+1):
-#        if(n==0):
-#            Transf[l,n] = 1/n_beads**0.5
-#        else:
-#            Transf[l,2*n-1] = (2/n_beads)**0.5\
-#                    *np.cos(-2*np.pi*n*(l+1)/n_beads)
-#            #print(-2*np.pi*n*(l-int(n_beads/2))/n_beads)
-#            Transf[l,2*n] = (2/n_beads)**0.5\
-#                    *np.sin(2*np.pi*n*(l+1)/n_beads)
-
-#print(Transf)
-    
-#----------------------------------------------------------------------
-    #rearr1 = np.zeros(n_beads,dtype=int)
-#
-#for i in range(int(n_beads/2)):
-#    rearr1[i]=-(2*(i+1))
-#    rearr1[i+int(n_beads/2)+1] =2*(i+1)
-#    
-#def rearrange(Q):
-#    return Q[:,:,rearr]
-#
-#def reverse_rearrange(Q):
-#    return Q[:,:,rearr1]
-
-#----------------------------------------------------------------------
-    
-#arr = np.array(range(-int(n_beads/2),int(n_beads/2+1)))*np.pi/n_beads
-#
-#w_arr = 2*w_n*np.sin(arr)
-#
-#rearr = np.zeros(n_beads,dtype= int)
-#
-#if(n_beads%2!=0):
-#    for i in range(1,int(n_beads/2)+1):
-#        rearr[2*i-1]=-i
-#        rearr[2*i]=i
-#    rearr+=int(n_beads/2)
-#else:
-#    for i in range(1,int(n_beads/2)):
-#        rearr[2*i-1]=-i
-#        rearr[2*i]=i
-#    rearr[len(rearr)-1] = -int(n_beads/2)
-#    rearr+=int(n_beads/2)
-#    
-#
-##print(rearr)
-#w_arr = w_arr[rearr]

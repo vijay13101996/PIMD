@@ -22,9 +22,8 @@ from matplotlib import pyplot as plt
 import Ring_polymer_dynamics
 start_time = time.time()
 
-def QC_MF_calculation(dpotential,N,n_sample,NQ,deltat):
-    print(MD_System.n_beads,MD_System.w_arr)
-    Q = np.linspace(0.5,3.0,NQ)
+def QC_MF_calculation(dpotential,N,n_sample,Q,deltat):
+    print(MD_System.n_beads,MD_System.w_arr) 
     QC_MF = np.zeros((len(Q),MD_System.dimension))
     swarmobject = MD_System.swarm(N)
     rand_boltz = np.random.RandomState(1)
@@ -62,23 +61,20 @@ def QC_MF_calculation(dpotential,N,n_sample,NQ,deltat):
         plt.show()
     
 
-def QCMD_instance(beads,dpotential,beta):
-    MD_System.system_definition(beta,beads,2,dpotential)
+def QCMD_instance(beads,dpotential,beta,N,n_sample,NQ,deltat):
+    swarmobject = MD_System.swarm(N,beads,beta,2)
     importlib.reload(Velocity_verlet)
-    N=100
-    n_sample=5
-    NQ = 50
-    deltat = 1.0
-    QC_MF_calculation(dpotential,N,n_sample,NQ,deltat)
     
-    f = open("/home/vgs23/Pickle_files/QCMD_Force_B_{}_NB_{}_N_{}_nsample_{}_deltat_{}_NQ_{}.dat".format(MD_System.beta,MD_System.n_beads,N,n_sample,deltat,NQ),'rb')       
+    #QC_MF_calculation(dpotential,N,n_sample,NQ,deltat)
+    
+    f = open("/home/vgs23/Pickle_files/QCMD_Force_B_{}_NB_{}_N_{}_nsample_{}_deltat_{}_NQ_{}.dat".format(beta,beads,N,n_sample,deltat,NQ),'rb')       
     #print("/home/vgs23/Pickle_files/QCMD_Force_B_{}_NB_{}_N_{}_nsample_{}_deltat_{}_NQ_{}.dat".format(MD_System.beta,MD_System.n_beads,N,n_sample,deltat,NQ))
     data = np.loadtxt(f)
     Q = data[:,0]
     QCMD_force = data[:,1]
     
     rforce = scipy.interpolate.interp1d(Q,QCMD_force,kind='cubic')
-    if(0):
+    if(1):
         plt.plot(Q,QCMD_force)
         plt.plot(Q,rforce(Q))
         plt.show()
@@ -125,15 +121,17 @@ def compute_tcf_AQCMD(n_QCMD_instance,N,beads,dpotential,beta,T,deltat):
         
     return tcf
         
-def compute_tcf_QCMD(n_instance,N,dpotential,beta,T,deltat):
+def compute_tcf_QCMD(n_instance,N,dpotential,beta,T,n_tp,deltat):
     
     for i in range(n_instance):
-        tcf =  Ring_polymer_dynamics.RPMD_instance((i+1)*100,N,1,dpotential,beta,T,deltat)
-        print('beta',MD_System.beta,'n_beads',MD_System.n_beads,'T',T)
-        f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP1.dat'.format(N*100,MD_System.beta,i,T,deltat),'wb')
+        tcf =  Ring_polymer_dynamics.RPMD_instance((i+1)*100,N,1,dpotential,beta,T,n_tp,deltat)
+        #print('beta',MD_System.beta,'n_beads',MD_System.n_beads,'T',T)
+        f = open('/home/vgs23/Pickle_files/QCMD_tcf_N_{}_B_{}_inst_{}_T_{}_dt_{}_SAMP10.dat'.format(N*100,beta,i,T,deltat),'wb')
         pickle.dump(tcf,f)
         #plt.plot(tcf_tarr,tcf,color='g')
         #plt.plot(tcf_tarr,np.cos(tcf_tarr),color='g')
         f.close()
         print(i,'completed')
         print('time',time.time() - start_time)
+
+    return tcf

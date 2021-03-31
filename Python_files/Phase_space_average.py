@@ -49,8 +49,6 @@ def phase_space_average(CMD,Matsubara,M,swarmobj,derpotential,tim,deltat,rng_ind
     n_approx = 10
     Quan_arr = np.zeros_like(tarr)
     print('thermalized', swarmobj.sys_kin()/(N*n_beads), swarmobj.m, swarmobj.sm, np.sum(swarmobj.p**2))
-    #plt.plot(np.mean(swarmobj.q,axis=2)[:,0],np.mean(swarmobj.q,axis=2)[:,1])
-    #plt.show()
     if(0):
         for j in range(n_approx):
             traj_data = Monodromy.Integration_instance(swarmobj.q,swarmobj.p)
@@ -87,97 +85,87 @@ def phase_space_average(CMD,Matsubara,M,swarmobj,derpotential,tim,deltat,rng_ind
     #Quan_arr/=(n_approx*swarmobj.N*MD_System.dimension*len(tarr))
     return Quan_arr
 
-N=100
-dim = 2
-n_beads = 36
-beta = 1.0/5
-deltat=1e-2
-T = 15.0
-
-tarr = np.arange(0,T+0.0001,T/100.0)
-
-
-
-def set_sim(N,dim,n_beads,beta,deltat,col):
-    swarmobject = MD_System.swarm(N)
-    MD_System.system_definition(beta,n_beads,dim,MD_System.dpotential)   #78943.7562025: Liquid Helium temperature
-    swarmobject.m = 0.5
-    swarmobject.sm = 0.5**0.5
-    MD_System.gamma = 10.0
-    imp.reload(Velocity_verlet)
-    Monodromy.system_definition_RP(N,dim,n_beads,n_beads/beta)
-
-
-    print('Beta',MD_System.beta)
-    rand_boltz = np.random.RandomState(1)
-    swarmobject.q = rand_boltz.rand(swarmobject.N,MD_System.dimension,MD_System.n_beads)
-    swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/(MD_System.beta),np.shape(swarmobject.q))
-
-    Matsubara = 0
-    CMD=0
-    M=0
-
-    Marr =phase_space_average(CMD,Matsubara,M,swarmobject,Monodromy.dpotential_cq_vv,T,deltat,1)
-    f =  open("/home/vgs23/Pickle_files/RPMD_OTOC_{}_beta_{}_n_bead_{}_tfinal_{}.dat".format('Coupled_harmonic',beta,n_beads,T),'wb')
-    pickle.dump(tarr,f)
-    pickle.dump(Marr,f)
-    f.close()
-
-    #cProfile.run('phase_space_average(CMD,Matsubara,M,swarmobject,Monodromy.force_dpotential,T,deltat,1)')
-    print('Time taken:',time.time()-start_time)
-    #fig = plt.figure(1)
-    #plt.plot(tarr[:50], Marr[:50])
-    #plt.plot(tarr,np.log(abs(Marr)),color=col,label=r'$N_b={}$'.format(n_beads))
-    #plt.plot(tarr,0.5*tarr)
-    #plt.legend()
-    #plt.plot(tarr,abs(Marr)**2)
-    #plt.plot(tarr,Marr)
-
-
-#set_sim(N,dim,n_beads,beta,deltat,'g')
-beadarr = [1,12,24,36]#,20,30]
-colorarr = ['r','g','b','m']
 
 if(0):
-    for (n_bead,col) in zip(beadarr,colorarr):
-        set_sim(N,dim,n_bead,beta,deltat,col)
-    plt.show()
+    N=100
+    dim = 2
+    n_beads = 36
+    beta = 1.0/5
+    deltat=1e-2
+    T = 15.0
+
+    tarr = np.arange(0,T+0.0001,T/100.0)
+
+    def set_sim(N,dim,n_beads,beta,deltat,col):
+        swarmobject = MD_System.swarm(N)
+        MD_System.system_definition(beta,n_beads,dim,MD_System.dpotential)   #78943.7562025: Liquid Helium temperature
+        swarmobject.m = 0.5
+        swarmobject.sm = 0.5**0.5
+        MD_System.gamma = 10.0
+        imp.reload(Velocity_verlet)
+        Monodromy.system_definition_RP(N,dim,n_beads,n_beads/beta)
+
+        print('Beta',MD_System.beta)
+        rand_boltz = np.random.RandomState(1)
+        swarmobject.q = rand_boltz.rand(swarmobject.N,MD_System.dimension,MD_System.n_beads)
+        swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/(MD_System.beta),np.shape(swarmobject.q))
+
+        Matsubara = 0
+        CMD=0
+        M=0
+
+        Marr =phase_space_average(CMD,Matsubara,M,swarmobject,Monodromy.dpotential_cq_vv,T,deltat,1)
+        f =  open("/home/vgs23/Pickle_files/RPMD_OTOC_{}_beta_{}_n_bead_{}_tfinal_{}.dat".format('Coupled_harmonic',beta,n_beads,T),'wb')
+        pickle.dump(tarr,f)
+        pickle.dump(Marr,f)
+        f.close()
+
+        print('Time taken:',time.time()-start_time)
+        
+    #set_sim(N,dim,n_beads,beta,deltat,'g')
+    beadarr = [1,12,24,36]#,20,30]
+    colorarr = ['r','g','b','m']
+
+    if(0):
+        for (n_bead,col) in zip(beadarr,colorarr):
+            set_sim(N,dim,n_bead,beta,deltat,col)
+        plt.show()
 
 
 
-fig = plt.figure(1)
-ax = fig.add_subplot(1,1,1)
-matplotlib.rcParams.update({'font.size': 50})
-#plt.suptitle('Thermal averaged stability matrix elements: Time evolution')
-#plt.title(r'$<M_{qq}> \;\; vs \;\; t$')
-plt.xlabel(r'$t$',fontsize=15)
-plt.ylabel(r'$C^{RP}_N(t)$',fontsize=15)
-plt.gcf().subplots_adjust(bottom=0.12,left=0.12)
-for axis in [ax.xaxis, ax.yaxis]:
-    axis.set_major_formatter(ScalarFormatter())
-#ax.legend(loc=1)
-for (bead,col) in zip(beadarr,colorarr):
-    f =  open("/home/vgs23/Pickle_files/RPMD_OTOC_{}_beta_{}_n_bead_{}_tfinal_{}.dat".format('Coupled_harmonic',beta,bead,T),'rb')
+    fig = plt.figure(1)
+    ax = fig.add_subplot(1,1,1)
+    matplotlib.rcParams.update({'font.size': 50})
+    #plt.suptitle('Thermal averaged stability matrix elements: Time evolution')
+    #plt.title(r'$<M_{qq}> \;\; vs \;\; t$')
+    plt.xlabel(r'$t$',fontsize=15)
+    plt.ylabel(r'$C^{RP}_N(t)$',fontsize=15)
+    plt.gcf().subplots_adjust(bottom=0.12,left=0.12)
+    for axis in [ax.xaxis, ax.yaxis]:
+        axis.set_major_formatter(ScalarFormatter())
+    #ax.legend(loc=1)
+    for (bead,col) in zip(beadarr,colorarr):
+        f =  open("/home/vgs23/Pickle_files/RPMD_OTOC_{}_beta_{}_n_bead_{}_tfinal_{}.dat".format('Coupled_harmonic',beta,bead,T),'rb')
+        tarr = pickle.load(f)
+        Marr = pickle.load(f)
+        f.close()
+
+        print('Time taken:',time.time()-start_time)
+        
+        plt.plot(tarr,(abs(Marr)),color=col,label=r'$N_b={}$'.format(bead))
+
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
+              fancybox=False, shadow=False, ncol=4,prop={'size': 10})
+
+    f =  open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format('Coupled_harmonic',beta,250,150,T),'rb')
     tarr = pickle.load(f)
-    Marr = pickle.load(f)
+    OTOC_arr = pickle.load(f)
     f.close()
+    matplotlib.rcParams.update({'font.size': 13})
+    ax.annotate('Quantum OTOC',xy=(2.5,1.2),xytext=(0.64,0.42),textcoords = 'axes fraction')
+    plt.plot(tarr,(OTOC_arr))
+    #plt.legend()
+    plt.yscale('log')
 
-    print('Time taken:',time.time()-start_time)
-    
-    plt.plot(tarr,(abs(Marr)),color=col,label=r'$N_b={}$'.format(bead))
-
-ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
-          fancybox=False, shadow=False, ncol=4,prop={'size': 10})
-
-f =  open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format('Coupled_harmonic',beta,250,150,T),'rb')
-tarr = pickle.load(f)
-OTOC_arr = pickle.load(f)
-f.close()
-matplotlib.rcParams.update({'font.size': 13})
-ax.annotate('Quantum OTOC',xy=(2.5,1.2),xytext=(0.64,0.42),textcoords = 'axes fraction')
-plt.plot(tarr,(OTOC_arr))
-#plt.legend()
-plt.yscale('log')
-
-plt.savefig('/home/vgs23/Images/RPMD_OTOC.eps', format='eps',dpi=96)
-plt.show()
+    plt.savefig('/home/vgs23/Images/RPMD_OTOC.eps', format='eps',dpi=96)
+    plt.show()

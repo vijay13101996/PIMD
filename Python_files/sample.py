@@ -65,6 +65,20 @@ A = np.array([0,1,2,3,4,5])
 #print(np.fft.fftfreq(len(A)))
 
 A = np.array([[[-40,-30,-20,-10,0,10,20,30,40]]])
+
+A = np.arange(0,30)
+A = np.reshape(A,(10,3))
+#print('A',A[:,0])
+
+B = np.arange(0,120)
+B = np.reshape(B, (10,3,4))
+#print('B',B)
+
+#print(A[:,0,None,None]*B)
+
+A = [[2,0],[0,1000]]
+print(np.linalg.cond(A))
+
 #rearr = [0]
 #temp1 = -np.array(range(1,int(len(A)/2) +1))
 #temp2 = -temp1
@@ -165,7 +179,7 @@ if(0):
     B=  h5f['B'][:]
     h5f.close()
 
-print('b',B,'A',A)
+    print('b',B,'A',A)
 
 #for i in range(int(len(A)/2)):
 #    rearr[i]=-(2*(i+1))
@@ -207,25 +221,26 @@ if(0):
                         init_func=init, blit=True)
     plt.show()
 
-from scipy.integrate import odeint,ode
-import scipy
-import sys
-sys.path.insert(1,'/home/vgs23/Python_files/')
-#from Int_func_sample.integration_function import f
-import Int_func_mod
-f = Int_func_mod.integration_function.f
+if(0):
+    from scipy.integrate import odeint,ode
+    import scipy
+    import sys
+    sys.path.insert(1,'/home/vgs23/Python_files/')
+    #from Int_func_sample.integration_function import f
+    import Int_func_mod
+    f = Int_func_mod.integration_function.f
 
-def func(y,t):
-    dydt = np.zeros_like(y)
-    dydt = f(y,t,dydt)
-    return dydt
+    def func(y,t):
+        dydt = np.zeros_like(y)
+        dydt = f(y,t,dydt)
+        return dydt
 
-def fu(y,t):
-    x,px = y
-    return np.array([px,-x])
+    def fu(y,t):
+        x,px = y
+        return np.array([px,-x])
 
-y0 = np.array([0.0,1.0])
-sol = scipy.integrate.odeint(fu,y0,[0,np.pi/4])
-print('sol',sol[1,0])
+    y0 = np.array([0.0,1.0])
+    sol = scipy.integrate.odeint(fu,y0,[0,np.pi/4])
+    print('sol',sol[1,0])
 
 

@@ -23,12 +23,13 @@ import importlib
 import time
 import pickle
 start_time = time.time()
-from Matsubara_potential import dpot
-from Matsubara_potential_hh import dpot_hh
+import Matsubara_potential
 #import Centroid_mean_force
 import Ring_polymer_dynamics
 #import Centroid_dynamics
 import Quasicentroid_dynamics
+import BondAngle_QC_dynamics
+import Matsubara_dynamics
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import Potentials_2D
@@ -38,8 +39,48 @@ import Centroid_dynamics
 
 ### CHANGE VV_STEP function!
 
-potential = Potentials_2D.potential_cb
-dpotential = Potentials_2D.dpotential_cb
+if(0):
+    ### 3D Morse potential
+    potential = Potentials_2D.potential_cb_r
+    dpotential = Potentials_2D.dpotential3_cb
+
+if(0):
+    ### Quartic potential
+    potential = Potentials_2D.potential_quartic
+    dpotential = Potentials_2D.dpotential_quartic
+
+if(1):
+    ### Quartic(Matsubara) potential
+    potential = Matsubara_potential.pot_inv_harmonic
+    dpotential = Matsubara_potential.dpot_inv_harmonic
+    ddpotential = Matsubara_potential.ddpot_inv_harmonic
+
+deltat = 0.01
+N = 10000
+T = 4.0#5.0*deltat#5000.0*deltat#3000*deltat
+
+n_tp = 1000 
+dt_tp = T/n_tp
+tcf_tarr = np.arange(0,T+0.0001,dt_tp)
+tcf = np.zeros_like(tcf_tarr) 
+
+fs =  41.341374575751
+
+beads=32
+T_K = 800
+beta= 1.0/5#315773/T_K#500.0    # Take care of redefinition of beta, when using QCMD!
+n_instance =1
+print('N',N)#*100*n_instance)
+print('Beta T_K',beta, T_K)
+print('deltat',deltat)
+print('beads',beads)
+
+ACMD = 0
+CMD = 0
+QCMD = 0 
+RPMD =0
+BAQCMD=0
+Matsubara=1
 
 if(0):
     x_ar = np.arange(0.1,6.0,0.1)
@@ -55,45 +96,57 @@ if(0):
     #ax.plot_surface(X,Y,Z)
     plt.show()
 
-def fourier_component_w(t_arr,tcf,w):
-    dt = t_arr[1]-t_arr[0]
-    ft_w = 0
-    for i in range(len(t_arr)):
-        ft_w += dt*np.exp(-1j*w*t_arr[i])*tcf[i]
-    return ft_w
+if(BAQCMD==1):
+    Q = np.linspace(1.0,2.5,50)
+    rforce = BondAngle_QC_dynamics.BAQCMD_instance(beads,dpotential,beta,100,1,Q,deltat)
+    #rforce16 = BondAngle_QC_dynamics.BAQCMD_instance(16,dpotential,beta,100,1,Q,deltat)
+    print('time',time.time() - start_time)
+      
+    def force3_baqcmd(Q):
+        r = np.sum(Q**2,axis=1)**0.5
+        r = r[:,np.newaxis]
+        r = np.repeat(r,3,axis=1)
+        #print('Q,r',Q,r)
+        return Q*rforce(r)/r
 
-def fourier_transform(t_arr, tcf,w_arr):
-    four_trans = np.zeros_like(w_arr) + 0j
-    for i in range(len(w_arr)):
-        four_trans[i] = fourier_component_w(t_arr,tcf,w_arr[i])
-    return four_trans
+    def force3_baqcmd16(Q):
+        r = np.sum(Q**2,axis=1)**0.5
+        r = r[:,np.newaxis]
+        r = np.repeat(r,3,axis=1)
+        #print('Q,r',Q,r)
+        return Q*rforce16(r)/r
+ 
+    def force2_baqcmd(Q):
+        r = np.sum(Q**2,axis=1)**0.5
+        r = r[:,np.newaxis]
+        r = np.repeat(r,2,axis=1)
+        #print('Q,r',Q,r)
+        return Q*rforce(r)/r
 
-deltat = 0.1
-N = 1000
-T = 1000.0#5.0*deltat#5000.0*deltat#3000*deltat
+    def forceorig_baqcmd(Q):
+        r = np.sum(Q**2,axis=1)**0.5
+        r = r[:,np.newaxis]
+        r = np.repeat(r,3,axis=1)
+        #print('Q,r',Q,r)
+        return Q*Potentials_2D.dpotential_cb_r(r)/r
 
-n_tp = 1000
-dt_tp = T/n_tp
-tcf_tarr = np.arange(0,T+0.0001,dt_tp)
-tcf = np.zeros_like(tcf_tarr) 
+    def forceharm_baqcmd(Q):
+        r = np.sum(Q**2,axis=1)**0.5
+        r = r[:,np.newaxis]
+        r = np.repeat(r,3,axis=1) 
+        return Q*Potentials_2D.dpotential_cb_harm(r)/r
+    
+    plt.plot(Q,Potentials_2D.dpotential_cb_harm(Q))
+    plt.show()
 
-fs =  41.341374575751
-
-beads=4
-T_K = 200
-beta= 315773/T_K#500.0    # Take care of redefinition of beta, when using QCMD!
-n_instance =1
-print('N',N)#*100*n_instance)
-print('Beta T_K',beta, T_K)
-print('deltat',deltat)
-print('beads',beads)
-
-ACMD = 1
-CMD = 0
-QCMD = 0 
+    tcf1 = BondAngle_QC_dynamics.compute_tcf_BAQCMD(n_instance,N,force3_baqcmd,beta,T,n_tp,deltat)
+    #tcf2 = BondAngle_QC_dynamics.compute_tcf_BAQCMD(n_instance,N,force3_baqcmd16,beta,T,n_tp,deltat)
+    plt.plot(tcf_tarr,tcf1)
+    #plt.plot(tcf_tarr,tcf2)
+    plt.show()
 
 if(QCMD==1):
-    rforce = Quasicentroid_dynamics.QCMD_instance(beads,dpotential,beta)
+    rforce = Quasicentroid_dynamics.QCMD_instance(32,dpotential,beta,100,5,128,1.0)
     print('time',time.time() - start_time)
     
     def force_xy(Q):
@@ -107,21 +160,11 @@ if(QCMD==1):
         ret = np.transpose(np.array([dpotx,dpoty]),(1,0,2))
         return ret#np.array([dpotx,dpoty])
     #force_xy = np.vectorize(force_xy)
-    
-    x_ar = np.concatenate([np.arange(0.1,2.01,0.01),np.arange(-2.0,-0.1,0.01)])
-    y_ar = np.concatenate([np.arange(0.1,2.01,0.01),np.arange(-2.0,-0.1,0.01)])
-    X,Y = np.meshgrid(x_ar,y_ar)
-    print(np.shape(x_ar),np.shape(y_ar))
-    
-    #fig = plt.figure()
-    #ax = fig.add_subplot(111, projection='3d')
-    #Z = force_xy(X,Y)[1,:,:]
-    #ax.plot_surface(X,Y,Z) 
-    #plt.imshow(force_xy(X,Y)[0,:,:])
-    #plt.show()
-    
-    Quasicentroid_dynamics.compute_tcf_QCMD(n_instance,N,force_xy,beta,T,deltat)
+     
+    tcf = Quasicentroid_dynamics.compute_tcf_QCMD(n_instance,N,force_xy,beta,T,n_tp,deltat)
        
+    plt.plot(tcf_tarr,tcf)
+    plt.show()
 if(0):
     """
     This code is for the Adiabatic implementation of Quasicentroid 
@@ -188,15 +231,15 @@ if(ACMD==1):
         #plt.show()
 
 #------------------------------------------------------- RPMD
-if(0):
+if(RPMD==1):
     #### The clumsy use of beta and beta_n interchangeably may 
     #### come back to haunt in the future. Whenever this code is used again,
     #### it has to be ensured that the temperature terms are all alright. 
    
-    Ring_polymer_dynamics.compute_tcf(n_instance,N,beads,dpotential,beta,T,deltat)
-    
+    #Ring_polymer_dynamics.compute_tcf(n_instance,N,beads,dpotential,beta,T,n_tp,deltat)
+    Ring_polymer_dynamics.compute_static_avg(N,beads,dpotential,beta,deltat)
     for i in range(n_instance):
-        f = open('/home/vgs23/Pickle_files/RPMD_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads,i,deltat,MD_System.n_beads),'rb')
+        f = open('/home/vgs23/Pickle_files/RPMD_Andersen_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}_S1.dat'.format(N*100,beta,i,deltat,beads),'rb')
         tcf += pickle.load(f)
         f.close()
         print(i,'completed')
@@ -204,10 +247,11 @@ if(0):
     tcf/=(n_instance)
     #tcf*=beads
     #print(tcf[0]*beads, tcf[5]*beads,tcf[45]*beads,tcf[89]*beads)
-    print(tcf[0],tcf[3],tcf[7])
-    plt.plot(tcf_tarr,tcf,color='r')
+    #print(tcf[0],tcf[3],tcf[7],tcf[10],tcf[11],tcf[25],tcf[45],tcf[63])
+    #print(tcf)
+    #plt.plot(tcf_tarr,tcf,color='r')
     #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
-    plt.show()
+    #plt.show()
 #---------------------------------------------------------CMD
 if(CMD==1):
     xforce = Centroid_dynamics.CMD_instance(beads,dpotential,beta)
@@ -244,188 +288,51 @@ if(CMD==1):
     #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
     plt.show()
 #---------------------------------------------------------Matsubara
+if(Matsubara==1):
+    M=3
+    
+    ntheta = 1
+    theta_arr =  np.linspace(-20.0,10.0,ntheta)
+    Matsubara_instance = [230]#,32,111,251] ### 210 is the index for OTOC, 220 is in progress. Don't use these seeds again. 
+    #Matsubara_dynamics.compute_phase_dep_tcf(n_instance, N, M,dpotential,beta,T,n_tp,deltat, theta_arr)
+    #Matsubara_dynamics.compute_phase_dep_OTOC(Matsubara_instance, N, M, dpotential,ddpotential,beta,T,n_tp,deltat, theta_arr)
+    
+    #beta_arr = [10.0,1.0,1.0/2,1.0/5,1.0/10,1.0/20]
+    #for betaa in beta_arr:
+    #    Matsubara_dynamics.compute_phase_dep_OTOC(Matsubara_instance, N, M, dpotential,ddpotential,betaa,T,n_tp,deltat, theta_arr)
+     
+    if(1):
+        tcf = np.zeros((len(tcf),ntheta)) + 0j
+        color_arr = ['r','g','b','m','c','k']
+        count = 0
+        #for betaa in beta_arr:
+        for i in Matsubara_instance:
+            f = open('/home/vgs23/Pickle_files/Matsubara_phase_dep_OTOC_N_{}_B_{}_inst_{}_dt_{}_M_{}_ntheta_{}.dat'.format(N,beta,i,deltat,M,ntheta),'rb')
+            tcf_curr = pickle.load(f)
+            tcf+= tcf_curr
+            print(tcf_curr[:,0])
+            plt.plot(tcf_tarr,np.log(abs(tcf_curr[:,0])),color=color_arr[count], label=beta)
+            count+=1
+            f.close()
+            print(i,count,'completed', tcf_curr[20])
 
-#n_mats_instance = 1
-#print('N',N*100*n_mats_instance)
-#print('Beta',MD_System.beta)
-#print('deltat',deltat)
-#
-#for i in range(n_mats_instance):
-#    tcf =  Matsubara_instance((i+1)*100,M)
-#    f = open('Matsubara_tcf_N_{}_B_{}_inst_{}_dt_{}_M_{}.dat'.format(N*100,MD_System.beta,i,deltat,M),'wb')
-#    pickle.dump(tcf,f)
-#    f.close()
-#    print(i,'completed')
-#    print('time',time.time() - start_time)
-
-
-  
-
-#--------------------------------------
-
-#n=n_mats_instance
-#for i in range(n):
-#    #tcf =  Matsubara_instance((i+1)*100)
-#    f = open('Matsubara_tcf_N_{}_B_{}_inst_{}_dt_{}_M_{}.dat'.format(N*100,MD_System.beta,i,deltat,M),'rb')
-#    tcf+=pickle.load(f)
-#    #plt.plot(tcf_tarr,np.real(tcf)/(i+1))
-#    #plt.plot(tcf_tarr,np.imag(tcf)/(i+1))
-#    f.close()
-#    #print(i,'completed')
-#tcf/=n
-#print(tcf[0])
-  
-#-------------------------------------
-
-#f = open('Matsubara_tcf_N_{}_B_{}.dat'.format(N*100,MD_System.beta*MD_System.n_beads),'rb')
-#tcf = pickle.load(f)
-#f.close()
-
-#data = np.loadtxt('mats_quart_qq_tcf_beta8nrp17mrp3numtraj640000.dat')
-##data = np.loadtxt('mats_quart_qq_tcf_beta8nrp17mrp1numtraj640000.dat')
-##data = np.loadtxt('quartic_M1_beta2_s1_CQQ.dat')
-#print(data[0,0],data[0,1])
-##print(tcf[0])
-#
-#plt.plot(tcf_tarr,np.real(tcf))
-#plt.plot(tcf_tarr,np.imag(tcf),color='r')
-##plt.plot(data[:,0],data[:,1])
-#plt.show()
-#plt.savefig('tcf.png')
-##plt.plot(data[:,0],data[:,1],color='r')
-#
-#print('time',time.time() - start_time)
-
-
-#----------------------------------------------------------CMD
-
-#MD_System.system_definition(8,64,MD_System.dpotential)
-##
-##importlib.reload(Velocity_verlet)
-#data = np.loadtxt("CMD_Force_B_{}_NB_{}.dat".format(MD_System.beta,MD_System.n_beads))
-#
-#
-##print(data)
-#
-##print(data)
-#Q = data[:,0]
-#CMD_force = data[:,1]
-##print(np.shape(data))
-#CMF = scipy.interpolate.interp1d(Q,CMD_force,kind='cubic')
-#
-##fig, ax = plt.subplots()
-##ax.plot(Q,-MD_System.dpotential(Q),color='g')
-##ax.plot(Q,-CMF(Q),color='r')
-##ax.set_xlim((-2,2))
-##ax.set_ylim((-2,2))
-#
-#
-#
-#MD_System.system_definition(8,1,CMF)
-#importlib.reload(Velocity_verlet)
-#
-#swarmobject = MD_System.swarm(N)
-#swarmobject.q = np.zeros((swarmobject.N,MD_System.dimension,1))
-#
-#rand_boltz = np.random.RandomState(1000)
-#swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/MD_System.beta,np.shape(swarmobject.q))
-#
-#pool = mp.Pool(mp.cpu_count())
-#CMD = 0
-#func = partial(corr_function_upgrade,CMD,swarmobject,CMF,MD_System.pos_op,MD_System.pos_op,T,deltat)
-#
-#n_inst = 10
-##print('here')
-#results = pool.map(func, range(n_inst))
-##print('there')
-#pool.close()
-#pool.join()
-#
-#tcf = np.sum(results,0)/n_inst
-#
-#
-##tcf = corr_function(swarmobject, pos_op,pos_op,20*np.pi,1)
-#tcf_tarr = np.arange(0,T+0.0001,T/500.0)
-#
-#data = np.loadtxt('170507_022844_08B_064NB_129NS_avg_cxx.dat')
-#
-#plt.plot(tcf_tarr,tcf)
-#plt.plot(data[:,0],data[:,1],color='r')
-
-
-#--------------------------------------------------------RPMD
-
-#swarmobject = swarm(N)
-#swarmobject.q = np.zeros((swarmobject.N,dimension,n_beads))
-##print(swarmobject.q)
-#rand_boltz = np.random.RandomState(1000)
-#swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/beta,np.shape(swarmobject.q))
-##print(swarmobject.p)
-#pool = mp.Pool(mp.cpu_count())
-#
-#func = partial(corr_function_upgrade,swarmobject,pos_op,pos_op,T,deltat)
-#
-#n_inst = 10
-##print('here')
-#results = pool.map(func, range(n_inst))
-##print('there')
-#pool.close()
-#pool.join()
-#
-#tcf = np.sum(results,0)/n_inst
-#
-#
-##tcf = corr_function(swarmobject, pos_op,pos_op,20*np.pi,1)
-#tcf_tarr = np.arange(0,T+0.0001,T/500.0)
-#
-#plt.plot(tcf_tarr,tcf)
-
-
-#---------------------------------------------------------STRAY CODE
-
-#Q = np.linspace(-10,10,129)
-##print(Q)
-#
-#data = np.loadtxt('170429_183220_01B_008NB_129NS_avg_mf.dat')
-#
-#swarmobject = swarm(N)
-#
-#rand_boltz = np.random.RandomState(1000)
-#swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/beta,(swarmobject.N,dimension,n_beads))
-#
-#n_sample = 10
-#rng=np.random.RandomState(1000)
-#CMD=1
-#
-#CMD_force = np.zeros((len(Q),dimension))
-#
-#
-##-------
-##swarmobject.q = np.zeros((swarmobject.N,dimension,n_beads))
-##rand_boltz.normal(0.0,swarmobject.m/beta,(swarmobject.N,dimension,n_beads))
-##
-##thermalize(CMD,swarmobject,dpotential,deltat,2e0,rng)
-##-------
-#for j in range(len(Q)):
-#    
-#    swarmobject.q = np.zeros((swarmobject.N,dimension,n_beads)) + Q[j]
-#    thermalize(CMD,swarmobject,dpotential,deltat,5,rng)
-#    
-#    for i in range(n_sample):
-#        CMD_force[j] += np.mean(dpotential(swarmobject.q))
-#        thermalize(CMD,swarmobject,dpotential,deltat,2,rng)
-#
-#
-#CMD_force/=n_sample    
-#
-#mean_force = scipy.interpolate.interp1d(Q,CMD_force[:,0],kind='cubic')
-##print(mean_force(4.0))
-#
-##print(CMD_force)
-#l=64-10
-#u=64+10
-#plt.plot(Q[l:u],CMD_force[l:u])
-###plt.scatter(Q,CMD_force)
-#plt.plot(Q[l:u],-data[l:u,1],color='r')
-##plt.show()
-##plt.scatter(Q,-data[:,1])
+        plt.legend()
+        plt.show()
+        tcf/=n_instance
+        #print('tcf',tcf,np.log(np.real(tcf)), np.log(-np.imag(tcf)))
+        #theta_arr = np.linspace(-10.0,10.0,ntheta)
+        for i in [0,1,2,3,5,7,8,9,10]:#range(ntheta):#,10,15,20]:#,25,30,35,40]:#range(20):
+            #print('i',i, max(np.log(tcf[:,i])))
+            plt.plot(tcf_tarr,np.log(abs(tcf[:,i])), label=theta_arr[i],linewidth=1.5)
+            #plt.plot(tcf_tarr,np.log(abs(np.real(tcf[:,i]))), label=theta_arr[i],linewidth=1.5) 
+            #plt.plot(tcf_tarr,np.log(abs(np.imag(tcf[:,i]))), label=theta_arr[i],linewidth=1.5)
+            
+            #w = (np.fft.fftfreq(tcf_tarr.shape[-1], d = dt_tp ))[:n_tp//2]
+            #fft = np.real(np.fft.fft(tcf[:,i]))[:n_tp//2]
+            #plt.plot(w,fft, label=theta_arr[i],linewidth=1.5) 
+            #plt.show()
+        #plt.plot(tcf_tarr,((tcf[:,20])),color ='g')
+        #plt.plot(tcf_tarr,((tcf[:,40])),color='b')
+        #plt.xlim([0,10])
+        plt.legend()
+        plt.show()

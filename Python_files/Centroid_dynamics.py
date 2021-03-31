@@ -62,7 +62,7 @@ def ACMD_instance(rng,N,beads,dpotential,beta,T,deltat):
     ACMD=1
     
     n_inst = 6
-    func = partial(corr_function_upgrade,ACMD,CMD,Matsubara,beads,swarmobject,dpotential,MD_System.pos_op,MD_System.pos_op,T,deltat)
+    func = partial(corr_function_upgrade,ACMD,CMD,Matsubara,beads,swarmobject,dpotential,MD_System.mom_op,MD_System.mom_op,T,deltat)
     results = pool.map(func, range(n_inst)) 
     pool.close()
     pool.join()

@@ -11,12 +11,14 @@ from copy import deepcopy,copy
 from numpy import linalg as LA
 from numpy.fft import fft,ifft
 from multiprocessing import Process
-from Velocity_verlet import vv_step, vv_step_thermostat, vv_step_qcmd_thermostat
-#from MD_System import gamma
+from Velocity_verlet import vv_step, vv_step_thermostat, vv_step_qcmd_thermostat, vv_step_baqcmd_thermostat
+from Theta_constrained_sampling import theta_constrained_randomize
 import MD_System
 import Velocity_verlet
 import psutil
 import sys
+from Animation import animate
+import scipy
 
 tarr = []
 ethermarr= []
@@ -25,17 +27,28 @@ parr = []
 kenergyarr =[]
 penergyarr =[]
 #renergyarr =[]
-def potential(x,y):
-    K=0.49
-    r_c = 1.89
-    r= (x**2 + y**2)**0.5
-    V_rh = (K/2)*(r-r_c)**2
-    
-    D0 = 0.18748
-    alpha = 1.1605
-    r_c = 1.8324
-    V_cb = D0*(1 - np.exp(-alpha*(r-r_c)))**2
-    return V_cb
+
+
+def baqcmd_thermalize(BAQCMD,swarmobj,BAQC_q,BAQC_p,U,lambda_curr,dpotential,deltat,thermtime,rng):
+    t=0.0
+    etherm = np.zeros(1)
+    tarr.append(t)
+    Velocity_verlet.set_therm_param(deltat,swarmobj.gamma)
+    count=0
+    x_ar= np.arange(1.0,1.5,0.01)
+    y_ar = np.arange(1,1.5,0.01)
+    X,Y = np.meshgrid(x_ar,y_ar)
+   
+    #print(np.sum(swarmobj.q**2,axis=1)**0.5)
+    while (t<=thermtime):
+        vv_step_baqcmd_thermostat(BAQCMD,swarmobj,BAQC_q,BAQC_p,U,lambda_curr,dpotential,deltat,rng)
+        #qarr.append(np.mean(swarmobj.q,axis=2))
+        t+=deltat 
+        #print('t',t, np.sum(swarmobj.q[0,2,:]))
+        count+=1
+
+    #print('thermdone', np.shape(qarr))
+    #animate(qarr) 
 
 def qcmd_thermalize(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,thermtime,rng):
     t=0.0
@@ -102,7 +115,7 @@ def thermalize(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): #
     #count=0
     #--------------------------------------------------------------------------------------- Beware of memory leaks when using any of the tools above!!!!!
     
-    Velocity_verlet.set_therm_param(deltat,MD_System.gamma)
+    Velocity_verlet.set_therm_param(deltat,swarmobj.gamma)
     
     while (t<=thermtime):
         if(psutil.virtual_memory()[2] > 60.0):
@@ -111,28 +124,30 @@ def thermalize(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): #
         vv_step_thermostat(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng)
         t+=deltat
         #count+=1
-        #print(etherm)
-        #print(pspace)
-        #print(t)
-        #if(count%50==0):
-         #   plt.plot(swarmobj.q[0,0,:],swarmobj.q[0,1,:])
-         #   plt.scatter(np.mean(swarmobj.q,axis=2)[0,0],np.mean(swarmobj.q,axis=2)[0,1])
-         #   plt.show()
-         #   #tarr.append(t)
-            
-            #qarr.append(swarmobj.q.copy())
-            #parr.append(copy(swarmobj.p))
-            #kenergyarr.append(swarmobj.sys_kin()/(swarmobj.N*MD_System.n_beads)) #+ swarmobj.sys_pot())
-            #penergyarr.append(swarmobj.sys_pot())
-            #print()
-            #ethermarr.append(etherm[0])
-            #parr.append(swarmobj.p.copy())
-    #print('hereh')
-    #print(np.shape(energyarr),np.shape(ethermarr))
-    #plt.plot(tarr,np.array(ethermarr)+np.array(kenergyarr))
-    #plt.plot(tarr,kenergyarr)#+ethermarr)
-    #plt.show()
-    #print('potential')
-    #print(penergyarr)
-    #print('rspa')
-    #print(parr)
+        
+def vel_randomize(swarmobj, Matsubara,rng):
+    #swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*swarmobj.ft_rearrange
+    if(Matsubara==1):
+        swarmobj.p = rng.normal(0, (swarmobj.m/swarmobj.beta)**0.5,swarmobj.q.shape) 
+    else:
+        swarmobj.p = rng.normal(0, (swarmobj.m/swarmobj.beta_n)**0.5,swarmobj.q.shape) 
+    
+    #swarmobj.p = scipy.fftpack.irfft(swarmobj.p,axis=2)*swarmobj.ft_rearrange
+
+def Andersen_thermalize(ACMD,CMD, Matsubara, M, swarmobj, niter, thermtime, dpotential, deltat, rng):
+    for i in range(niter):
+        vel_randomize(swarmobj,Matsubara,rng)
+        t=0.0
+        while(t<=thermtime):
+            vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat)
+            t+=deltat
+
+def Theta_constrained_thermalize(ACMD,CMD,Matsubara,M,swarmobj,theta,niter,thermtime,dpotential,deltat,rng):
+    #for i in range(niter):
+        theta_constrained_randomize(swarmobj,theta,rng)
+        t=0.0
+        while(t<=thermtime):
+            vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat)
+            t+=deltat
+        print('thermalized theta')
+

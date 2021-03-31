@@ -26,11 +26,6 @@ import time
 import pickle
 start_time = time.time()
 
-#data = np.loadtxt(glob.glob('*08B_064NB_257NS_avg_mf.dat')[0])
-
-## NOT CLEAR WHAT FILE THIS IS!!!1
-
-### This file standard organization has been screwed up. Beware when you try to do something with this!!!
 
 def mean_force_calculation(dpotential,N,deltat,Q,n_sample):
     print(MD_System.n_beads,MD_System.w_arr)

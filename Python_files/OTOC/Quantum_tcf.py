@@ -47,9 +47,9 @@ Ensure that the OTOC normalized is adjusted for 1D systems
 """
 
 
-L = 1.0
+L = 10.0
 N = 100
-a = 0
+a = -L
 b = L
 x= np.linspace(a,b,N+1)
 y= np.linspace(0.5*a,0.5*b,N+1)        #### CHANGE the grid according to the potential, when computing OTOC
@@ -63,7 +63,7 @@ plot_potential = 0
 Diagonalize_2D = 0
 #--------------------------------------------------------
     
-if(0):
+if(1):
         """
         This part of the code computes the eigenvalues and eigenvectors
         for a given 1D Hamiltonian
