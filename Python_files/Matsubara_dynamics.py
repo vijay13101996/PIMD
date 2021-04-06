@@ -6,7 +6,7 @@ Created on Tue Dec 17 14:37:29 2019
 @author: vgs23
 """
 import numpy as np
-from Correlation_function import corr_function_matsubara, corr_function_phaseless_Matsubara, OTOC_phase_dep_Matsubara, corr_function_phase_dep_Matsubara
+from Correlation_function import compute_phase_histogram,corr_function_matsubara, corr_function_phaseless_Matsubara, OTOC_phase_dep_Matsubara, corr_function_phase_dep_Matsubara
 import MD_System
 import multiprocessing as mp
 from functools import partial
@@ -81,7 +81,6 @@ def Phase_dep_tcf_instance(rng,N,M,dpotential,beta,T,n_tp, deltat, theta_arr):
         tcf_thetat = corr_function_phase_dep_Matsubara(swarmobject,dpotential,swarmobject.pos_op,swarmobject.pos_op,T,n_tp,theta_arr,deltat,rng)
         return tcf_thetat
         
-
 def Phase_dep_OTOC_instance(rng,N,M,dpotential,ddpotential,beta,T,n_tp, deltat, theta_arr):
     swarmobject = MD_System.swarm(N,M,beta,1)
 
@@ -91,6 +90,13 @@ def Phase_dep_OTOC_instance(rng,N,M,dpotential,ddpotential,beta,T,n_tp, deltat, 
     
     #print('rng', rng, swarmobject.p[0])
     #print('theta',theta_arr, theta_arr.dtype)
+    
+    if(0):
+        B_hist,C = compute_phase_histogram(10,swarmobject,dpotential,beta,deltat,theta_arr,rand_boltz)
+        f = open('/home/vgs23/Pickle_files/Matsubara_histogram_B_{}_inst_{}_M_{}_deltat_{}_ntheta_{}.dat'.format(N,beta,rng,M,deltat,len(theta_arr)),'wb')
+        pickle.dump(B_hist,f)
+        pickle.dump(C,f)
+        f.close()
     
     if(1):
         pool = mp.Pool(5)

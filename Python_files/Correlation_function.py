@@ -65,8 +65,7 @@ def corr_function_QCMD(swarmobj,QC_q,QC_p,lambda_curr,A,B,time_corr,deltat,dpote
     tcf/=(n_approx*swarmobj.N*len(tcf))#*MD_System.dimension)    ## BE CAREFUL HERE!!!
     return tcf
 
-def corr_function(swarmobj,A,B,time_corr,deltat,rng_ind):
-    
+def corr_function(swarmobj,A,B,time_corr,deltat,rng_ind): 
     """ 
     This function computes the time correlation function for one instance
     of the system prepared by seeding with rng_ind
@@ -468,30 +467,28 @@ def corr_function_matsubara(ACMD,CMD,Matsubara,M,swarmobj,derpotential,A,B,time_
     #print('tcf',tcf)
     return tcf
 
-def OTOC_Classical(CMD,Matsubara,M,swarmobj,derpotential,tim,n_tp,deltat,rng_ind):
+def OTOC_Classical(swarmobj,derpotential,ddpotential,tim,n_tp,deltat,rng_ind):
     rng = np.random.RandomState(rng_ind)
-    tarr = np.arange(0,tim+0.0001,tim/n_tp)
-        
-    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,200,rng)
+    tcf_tarr = np.arange(0,tim+0.0001,tim/n_tp)
+    tcf = np.zeros_like(tcf_tarr)
+    start_time = time.time()
+    thermalize(0,0,0,1,swarmobj,derpotential,deltat,20,rng)
     print('Time 1', time.time()-start_time)
-    n_approx = 10
-    Quan_arr = np.zeros_like(tarr)
-    print('thermalized', swarmobj.sys_kin()/(N*n_beads), swarmobj.m, swarmobj.sm, np.sum(swarmobj.p**2))
+    n_approx = 1
+    print('thermalized', swarmobj.sys_kin()/(swarmobj.N), swarmobj.m, swarmobj.sm, np.sum(swarmobj.p**2))
     
-    for j in range(n_approx):
-        traj_data = Monodromy.Integration_instance(swarmobj.q,swarmobj.p)
-        pool = mp.Pool(mp.cpu_count()-2)
-        for i in range(1,len(tarr)):
-            time_evolve(CMD,Matsubara,M,swarmobj, derpotential, deltat, tarr[i]-tarr[i-1])
-            traj_data = Monodromy.vector_integrate(pool,tarr[i]-tarr[i-1],traj_data)
-            Quan_arr[i]+= np.sum(Monodromy.vector_mqq(pool,traj_data))
-        pool.close()
-        pool.join()
-        #thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,4,rng)
+    for j in range(n_approx): 
+        traj_arr = Monodromy.ode_instance_classical(swarmobj,tcf_tarr,derpotential,ddpotential)    
+        swarmobj.q = Monodromy.q_classical(traj_arr,swarmobj)[len(traj_arr)-1]
+        swarmobj.p = Monodromy.p_classical(traj_arr,swarmobj)[len(traj_arr)-1]
+        tcf_cr = Monodromy.detmqq_classical(traj_arr,swarmobj)
+        tcf+= np.sum(tcf_cr,axis=1) #-- Summing up over the particles
+         
+        #thermalize(0,0,1,swarmobj,derpotential,deltat,20,rng)
         print(time.time()-start_time)
     
-    Quan_arr/=(n_approx*swarmobj.N) 
-    return Quan_arr
+    tcf/=(n_approx*swarmobj.N) 
+    return tcf
 
 def OTOC_RP(CMD,Matsubara,M,swarmobj,derpotential,tim,n_tp,deltat,rng_ind):
     rng = np.random.RandomState(rng_ind)
@@ -583,6 +580,28 @@ def OTOC_theta(swarmobj,derpotential,ddpotential,thetag,time_corr,n_tp,deltat,rn
     tcf/=(n_approx*swarmobj.N)
     #print('tcf',tcf.shape,tcf)
     return tcf
+
+def compute_phase_histogram(n_sample,swarmobj,derpotential,beta,deltat,theta_arr,rng):
+    denom = 0.0j
+    B_hist = np.zeros_like(theta_arr)
+    rearr = rearrangearr(swarmobj.n_beads)
+    for i in range(n_sample):
+        thermalize(0,0,1,swarmobj.n_beads,swarmobj,derpotential,deltat,50,rng)
+        theta = matsubara_phase_factor(swarmobj.n_beads,swarmobj,rearr)
+        hist, bin_edges = np.histogram(theta, bins=len(theta_arr), range=(theta_arr[0],theta_arr[-1]),density=True)#len(theta_arr))
+        B_hist+=hist/hist.sum()
+        print('hist',hist.sum(),np.sum(B_hist))
+        plt.hist(theta,bins = len(theta_arr), range=(theta_arr[0],theta_arr[-1]),density=True)
+        plt.show()
+        exponent = 1j*(swarmobj.beta)*theta
+        denom+= np.sum(np.exp(exponent))
+        print('denom', np.sum(np.exp(exponent))/swarmobj.N)
+
+    denom/=(swarmobj.N*n_sample)
+    B_hist/=n_sample
+    print('denom final, B_hist ', denom, B_hist.sum())
+
+    return B_hist, denom
 
 def OTOC_phase_dep_Matsubara(swarmobj,derpotential,ddpotential,time_corr,n_tp,theta_arr,deltat,rng_ind):
     tcf_thetat = np.zeros((n_tp+1,len(theta_arr))) +0j

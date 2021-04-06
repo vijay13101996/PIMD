@@ -101,8 +101,12 @@ def vector_mqq(pool,arr):
     result = pool.map(compute_monodromy_mqq, arr)
     return result
 #----------------------------------------------------------------------------------------------------- The following code is to be used for propagating Monodromy matrices for interacting systems.
-def func(y,t): 
-    global m
+def func_classical(y,t,swarmobj,dpotential,ddpotential): 
+    m = swarmobj.m
+    n_particles = swarmobj.N
+    n_dim = swarmobj.dimension
+    
+    N = n_particles*n_dim
     q = y[:N].reshape(n_particles,n_dim)
     p = y[N:2*N].reshape(n_particles,n_dim)
     n_mmat = n_particles*n_dim*n_dim
@@ -110,14 +114,19 @@ def func(y,t):
     Mpq = y[2*N+n_mmat:2*N+2*n_mmat].reshape(n_particles,n_dim,n_dim)
     Mqp = y[2*N+2*n_mmat:2*N+3*n_mmat].reshape(n_particles,n_dim,n_dim)
     Mqq = y[2*N+3*n_mmat:2*N+4*n_mmat].reshape(n_particles,n_dim,n_dim)
-    dd_mpp = -np.matmul(ddpotential_He(q),Mqp)
-    dd_mpq = -np.matmul(ddpotential_He(q),Mqq)
-    dydt = np.concatenate((p.flatten(),-dpotential_He(q).flatten(),dd_mpp.flatten(),dd_mpq.flatten(),Mpp.flatten()/m, Mpq.flatten()/m  ))
-    
+    dd_mpp = -ddpotential(q)[:,:,None]*Mqp  ## CHANGE HERE FOR MORE THAN 1D
+    dd_mpq = -ddpotential(q)[:,:,None]*Mqq
+    #print('Mpp', Mpp, np.cos(t)) 
+    dydt = np.concatenate((p.flatten(),-dpotential(q).flatten(),dd_mpp.flatten(),dd_mpq.flatten(),Mpp.flatten()/m, Mpq.flatten()/m)) 
     return dydt
 
-def ode_instance(q,p,tarr):
+def ode_instance_classical(swarmobj,tarr,dpotential,ddpotential):
+    n_particles = swarmobj.N
+    n_dim = swarmobj.dimension
     print('Defining ODE instance with n_particles,n_dim',n_particles,n_dim)
+    q = swarmobj.q.copy()
+    p = swarmobj.p.copy()
+    
     Mpp= np.zeros((n_particles,n_dim,n_dim))
     Mpq= np.zeros_like(Mpp)
     Mqp= np.zeros_like(Mpp)
@@ -125,17 +134,37 @@ def ode_instance(q,p,tarr):
 
     Mpp = np.array([np.identity(n_dim) for i in range(n_particles)])
     Mqq = Mpp.copy()
-    y0=np.concatenate((q.flatten(), p.flatten(),Mpp.flatten(),Mpq.flatten(),Mqp.flatten(),Mqq.flatten() ))
-    #print(y0)
-    sol = scipy.integrate.odeint(func,y0,tarr,mxstep=100000)
+    y0=np.concatenate((q.flatten(), p.flatten(),Mpp.flatten(),Mpq.flatten(),Mqp.flatten(),Mqq.flatten()))
+    sol = scipy.integrate.odeint(func_classical,y0,tarr,args = (swarmobj,dpotential,ddpotential),mxstep=100)
     print(sol[len(tarr)-1,:10])
     return sol
 
-def detmqq(sol):
+def detmqq_classical(sol,swarmobj):
+    n_particles = swarmobj.N
+    n_dim = swarmobj.dimension
+    N = n_particles*n_dim
     n_mmat = n_particles*n_dim**2
     sol_mqq = sol[:,2*N+3*n_mmat:2*N+4*n_mmat].reshape(len(sol),n_particles,n_dim,n_dim)
     print('mqq',np.shape(sol_mqq))
     return np.linalg.det(sol_mqq)
+
+def q_classical(sol,swarmobj):  
+    n_particles = swarmobj.N
+    n_dim = swarmobj.dimension
+    n_mmat = n_particles*n_dim**2
+    N = n_particles*n_dim
+    sol_q = sol[:,:N].reshape(len(sol),n_particles,n_dim)
+    #print('q',np.shape(sol_q))
+    return sol_q
+
+def p_classical(sol,swarmobj):  
+    n_particles = swarmobj.N
+    n_dim = swarmobj.dimension
+    n_mmat = n_particles*n_dim**2
+    N = n_particles*n_dim
+    sol_p = sol[:,N:2*N].reshape(len(sol),n_particles,n_dim)
+    #print('q',np.shape(sol_q))
+    return sol_p
 
 #----------------------------------------------------------------------------------------------------
 def dpotential_c(q,dpotential):
@@ -297,7 +326,7 @@ def ode_instance_Matsubara(swarmobj,tarr,dpotential,ddpotential):
     Mqq = Mpp.copy()
    
     y0=np.concatenate((q.flatten(), p.flatten(),Mpp.flatten(),Mpq.flatten(),Mqp.flatten(),Mqq.flatten()))
-    sol = scipy.integrate.odeint(func_Matsubara,y0,tarr,args = (swarmobj,dpotential,ddpotential),mxstep=10000)
+    sol = scipy.integrate.odeint(func_Matsubara,y0,tarr,args = (swarmobj,dpotential,ddpotential),mxstep=100)
     
     return sol
 

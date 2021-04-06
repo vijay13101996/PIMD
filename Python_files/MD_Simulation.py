@@ -30,10 +30,11 @@ import Ring_polymer_dynamics
 import Quasicentroid_dynamics
 import BondAngle_QC_dynamics
 import Matsubara_dynamics
+import Classical_dynamics
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import Potentials_2D
-import Potentials_1D
+#import Potentials_1D
 import csv
 import Centroid_dynamics
 
@@ -51,12 +52,12 @@ if(0):
 
 if(1):
     ### Quartic(Matsubara) potential
-    potential = Matsubara_potential.pot_inv_harmonic
-    dpotential = Matsubara_potential.dpot_inv_harmonic
-    ddpotential = Matsubara_potential.ddpot_inv_harmonic
+    potential = Matsubara_potential.pot_inv_harmonic_M3
+    dpotential = Matsubara_potential.dpot_inv_harmonic_M3
+    ddpotential = Matsubara_potential.ddpot_inv_harmonic_M3
 
 deltat = 0.01
-N = 10000
+N = 1000
 T = 4.0#5.0*deltat#5000.0*deltat#3000*deltat
 
 n_tp = 1000 
@@ -68,7 +69,7 @@ fs =  41.341374575751
 
 beads=32
 T_K = 800
-beta= 1.0/5#315773/T_K#500.0    # Take care of redefinition of beta, when using QCMD!
+beta= 1.0/5#1.0/5#315773/T_K#500.0    # Take care of redefinition of beta, when using QCMD!
 n_instance =1
 print('N',N)#*100*n_instance)
 print('Beta T_K',beta, T_K)
@@ -78,8 +79,10 @@ print('beads',beads)
 ACMD = 0
 CMD = 0
 QCMD = 0 
+AQCMD =0
 RPMD =0
 BAQCMD=0
+Classical=0
 Matsubara=1
 
 if(0):
@@ -95,7 +98,6 @@ if(0):
     #Z[Z>1] = 1
     #ax.plot_surface(X,Y,Z)
     plt.show()
-
 if(BAQCMD==1):
     Q = np.linspace(1.0,2.5,50)
     rforce = BondAngle_QC_dynamics.BAQCMD_instance(beads,dpotential,beta,100,1,Q,deltat)
@@ -144,7 +146,6 @@ if(BAQCMD==1):
     plt.plot(tcf_tarr,tcf1)
     #plt.plot(tcf_tarr,tcf2)
     plt.show()
-
 if(QCMD==1):
     rforce = Quasicentroid_dynamics.QCMD_instance(32,dpotential,beta,100,5,128,1.0)
     print('time',time.time() - start_time)
@@ -165,7 +166,7 @@ if(QCMD==1):
        
     plt.plot(tcf_tarr,tcf)
     plt.show()
-if(0):
+if(AQCMD==1):
     """
     This code is for the Adiabatic implementation of Quasicentroid 
     Molecular dynamics.
@@ -192,9 +193,7 @@ if(0):
         print(i,'completed')
     #plt.plot(tcf_tarr,tcf,color='g')
     plt.show()
-
-if(ACMD==1):
-    
+if(ACMD==1): 
     """
     This code is for Adiabatic implementation of Centroid Molecular 
     dynamics.
@@ -225,19 +224,9 @@ if(ACMD==1):
         tcf/=(n_instance)
         #tcf*=beads
         print(tcf[0], tcf[5]*beads,tcf[45]*beads,tcf[89]*beads)
-        #print(tcf[0],tcf[3],tcf[7])
-        #plt.plot(tcf_tarr,tcf,color='g')
-        #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
-        #plt.show()
-
-#------------------------------------------------------- RPMD
 if(RPMD==1):
-    #### The clumsy use of beta and beta_n interchangeably may 
-    #### come back to haunt in the future. Whenever this code is used again,
-    #### it has to be ensured that the temperature terms are all alright. 
-   
-    #Ring_polymer_dynamics.compute_tcf(n_instance,N,beads,dpotential,beta,T,n_tp,deltat)
-    Ring_polymer_dynamics.compute_static_avg(N,beads,dpotential,beta,deltat)
+    Ring_polymer_dynamics.compute_tcf(n_instance,N,beads,dpotential,beta,T,n_tp,deltat)
+    #Ring_polymer_dynamics.compute_static_avg(N,beads,dpotential,beta,deltat)
     for i in range(n_instance):
         f = open('/home/vgs23/Pickle_files/RPMD_Andersen_tcf_N_{}_B_{}_inst_{}_dt_{}_NB_{}_S1.dat'.format(N*100,beta,i,deltat,beads),'rb')
         tcf += pickle.load(f)
@@ -245,14 +234,6 @@ if(RPMD==1):
         print(i,'completed')
     
     tcf/=(n_instance)
-    #tcf*=beads
-    #print(tcf[0]*beads, tcf[5]*beads,tcf[45]*beads,tcf[89]*beads)
-    #print(tcf[0],tcf[3],tcf[7],tcf[10],tcf[11],tcf[25],tcf[45],tcf[63])
-    #print(tcf)
-    #plt.plot(tcf_tarr,tcf,color='r')
-    #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
-    #plt.show()
-#---------------------------------------------------------CMD
 if(CMD==1):
     xforce = Centroid_dynamics.CMD_instance(beads,dpotential,beta)
     Q=np.arange(0.5,3,0.1) 
@@ -287,17 +268,37 @@ if(CMD==1):
     plt.plot(tcf_tarr,tcf,color='r')
     #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
     plt.show()
-#---------------------------------------------------------Matsubara
+if(Classical==1):
+    Classical_instance = [0] 
+    Classical_dynamics.compute_classical_OTOC(Classical_instance, N, dpotential, ddpotential, beta, T,n_tp, deltat)
+    tcf = np.zeros(len(tcf))
+    
+    color_arr = ['r','g','b','m','c','k']
+    count = 0
+        
+    for i in Classical_instance:
+                f = open('/home/vgs23/Pickle_files/Classical_OTOC_N_{}_B_{}_inst_{}_dt_{}.dat'.format(N,beta,i,deltat),'rb')
+                tcf_curr = pickle.load(f)
+                tcf+= tcf_curr
+                print(tcf_curr)
+                plt.plot(tcf_tarr,np.log(abs(tcf_curr)),color=color_arr[count], label=beta)
+                count+=1
+                f.close()
+                print(i,count,'completed', tcf_curr.shape)
+
+    plt.legend()
+    plt.show()
+    tcf/=n_instance
+        
 if(Matsubara==1):
-    M=3
-    
+    M=3    
     ntheta = 1
-    theta_arr =  np.linspace(-20.0,10.0,ntheta)
-    Matsubara_instance = [230]#,32,111,251] ### 210 is the index for OTOC, 220 is in progress. Don't use these seeds again. 
+    theta_arr =  np.linspace(-500.0,500.0,ntheta)
+    Matsubara_instance = [300]#,32,111,251] ### 210 is the index for OTOC, 220 is in progress. Don't use these seeds again. 
     #Matsubara_dynamics.compute_phase_dep_tcf(n_instance, N, M,dpotential,beta,T,n_tp,deltat, theta_arr)
-    #Matsubara_dynamics.compute_phase_dep_OTOC(Matsubara_instance, N, M, dpotential,ddpotential,beta,T,n_tp,deltat, theta_arr)
+    Matsubara_dynamics.compute_phase_dep_OTOC(Matsubara_instance, N, M, dpotential,ddpotential,beta,T,n_tp,deltat, theta_arr)
     
-    #beta_arr = [10.0,1.0,1.0/2,1.0/5,1.0/10,1.0/20]
+    #beta_arr = [1.0/2,1.0/5,1.0/10]
     #for betaa in beta_arr:
     #    Matsubara_dynamics.compute_phase_dep_OTOC(Matsubara_instance, N, M, dpotential,ddpotential,betaa,T,n_tp,deltat, theta_arr)
      
@@ -305,25 +306,26 @@ if(Matsubara==1):
         tcf = np.zeros((len(tcf),ntheta)) + 0j
         color_arr = ['r','g','b','m','c','k']
         count = 0
-        #for betaa in beta_arr:
+        #for beta in beta_arr:
         for i in Matsubara_instance:
-            f = open('/home/vgs23/Pickle_files/Matsubara_phase_dep_OTOC_N_{}_B_{}_inst_{}_dt_{}_M_{}_ntheta_{}.dat'.format(N,beta,i,deltat,M,ntheta),'rb')
-            tcf_curr = pickle.load(f)
-            tcf+= tcf_curr
-            print(tcf_curr[:,0])
-            plt.plot(tcf_tarr,np.log(abs(tcf_curr[:,0])),color=color_arr[count], label=beta)
-            count+=1
-            f.close()
-            print(i,count,'completed', tcf_curr[20])
+                f = open('/home/vgs23/Pickle_files/Matsubara_phase_dep_OTOC_N_{}_B_{}_inst_{}_dt_{}_M_{}_ntheta_{}.dat'.format(N,beta,i,deltat,M,ntheta),'rb')
+                tcf_curr = pickle.load(f)
+                tcf+= tcf_curr
+                print(tcf_curr[:,0])
+                plt.plot(tcf_tarr,np.log(abs(tcf_curr[:,0])),color=color_arr[count], label=beta)
+                count+=1
+                f.close()
+                print(i,count,'completed', tcf_curr[20])
 
         plt.legend()
         plt.show()
         tcf/=n_instance
         #print('tcf',tcf,np.log(np.real(tcf)), np.log(-np.imag(tcf)))
         #theta_arr = np.linspace(-10.0,10.0,ntheta)
-        for i in [0,1,2,3,5,7,8,9,10]:#range(ntheta):#,10,15,20]:#,25,30,35,40]:#range(20):
+        plt.title(r'$C_T^{Mats}$ vs $\theta$')
+        for i in [0,1,2,3,4,5,6,7,8,9,10]:#range(ntheta):#,10,15,20]:#,25,30,35,40]:#range(20):
             #print('i',i, max(np.log(tcf[:,i])))
-            plt.plot(tcf_tarr,np.log(abs(tcf[:,i])), label=theta_arr[i],linewidth=1.5)
+            plt.plot(tcf_tarr,np.log(abs(tcf[:,i])), label=r'$\theta$={}'.format(theta_arr[i]),linewidth=1.5)
             #plt.plot(tcf_tarr,np.log(abs(np.real(tcf[:,i]))), label=theta_arr[i],linewidth=1.5) 
             #plt.plot(tcf_tarr,np.log(abs(np.imag(tcf[:,i]))), label=theta_arr[i],linewidth=1.5)
             
@@ -334,5 +336,15 @@ if(Matsubara==1):
         #plt.plot(tcf_tarr,((tcf[:,20])),color ='g')
         #plt.plot(tcf_tarr,((tcf[:,40])),color='b')
         #plt.xlim([0,10])
+        
+        plt.ylabel(r'$C_T(t)$')
+        plt.xlabel(r'$t$')
+
+        f =  open("/home/vgs23/Pickle_files/OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format('inv_harmonic',0.2,50,50,4.0),'rb+')
+        t_arr = pickle.load(f,encoding='latin1')
+        OTOC_arr = pickle.load(f,encoding='latin1')
+        plt.plot(t_arr,np.log(OTOC_arr), label='Quantum OTOC')
+        f.close()
+
         plt.legend()
         plt.show()

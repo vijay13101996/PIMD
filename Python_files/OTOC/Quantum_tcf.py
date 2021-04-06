@@ -17,7 +17,9 @@ import multiprocessing as mp
 import time
 import pickle
 import importlib
-import OTOC_f
+#import OTOC_f
+import OTOC_f_1D
+import OTOC_f_2D
 import cProfile
 import sys
 sys.path.insert(1,'/home/vgs23/Python_files/')
@@ -32,7 +34,7 @@ import imp
 from matplotlib import rc
 from matplotlib.ticker import ScalarFormatter
 
-imp.reload(OTOC_f)
+imp.reload(OTOC_f_1D)
 start_time= time.time()
 
 """
@@ -74,9 +76,9 @@ if(1):
         vecs = np.zeros((N-1,N-1))
         vals = np.zeros(N-1)
         
-        H_diagonalization.Diagonalize_1D(x,dx,a,b,N,Potentials_1D.potential_1D_box,vals,vecs)
+        H_diagonalization.Diagonalize_1D(x,dx,a,b,N,Potentials_1D.potential_inv_harmonic,vals,vecs)
         print('vals',vals[:30])
-        if(0):
+        if(1):
             """
             This part of the code is meant to weed out unphysical 
             eigenvalues, which mostly occurs for singular potentials
@@ -158,12 +160,10 @@ if(Diagonalize_2D==1):
             
         return wf
     
-    
-
 #------------------------------------------------
 print('time 1',time.time()-start_time)
    
-if(1):
+if(0):
     """
     This part of the code is meant for computing the 2 point
     quantum time correlation functions using DVR
@@ -190,7 +190,7 @@ if(1):
     plt.plot(tarr,np.real(tcf_tarr))#, np.imag(tcf_tarr))
     plt.show()
     
-if(0):   
+if(1):   
     
     """
     This part of the code shall remain the same, even when other
@@ -199,8 +199,8 @@ if(0):
     
     """
     
-    basis_N = 30
-    n_eigen = 30
+    basis_N = 50
+    n_eigen = 50
     basis_x = np.zeros((N,N))
     if(0):
         f = open("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}.dat".format(pot_key,N),'rb')
@@ -264,9 +264,8 @@ if(0):
         """
 
         beta = 1.0/100
-        t_final = 1.0
+        t_final = 4.0
         t_arr = np.arange(0.0,t_final,0.001)
-        
          
         #c_mc_arr = np.zeros_like(t_arr)
         #c_mc_arr = OTOC_f.position_matrix.compute_c_mc_arr_t(vecs,x_arr,dx,dy,k_arr,vals,0,m_arr,t_arr,c_mc_arr)
@@ -276,59 +275,58 @@ if(0):
         beta_arr = 1.0/np.array([1,40,200,400])### This is for Stadium billiards
         beta_arr = 1.0/np.array([1,2,4,10])   ### This is for Coupled_quartic
         beta_arr = 1.0/np.array([1,20,40,100]) ### This is for 1D_Box
-        #beta_arr = [1.0/100]      
+        beta_arr = [1.0/5]      
         print('beta_arr,n_basis,n_eigen',beta_arr,basis_N,n_eigen)
         print('Boltzmann factor', np.exp(-beta_arr[0]*vals[n_eigen-1]), np.exp(-beta_arr[0]*vals[0]))
 
-        if(0):   
+        if(1):   
             for betaa in beta_arr: 
                 print('vals,vecs',np.shape(vecs),np.shape(vals))
-                OTOC_arr = OTOC_f.position_matrix.compute_kubo_otoc_arr_t(vecs,x_arr,dx,dy,k_arr,vals,m_arr,t_arr,betaa,n_eigen,OTOC_arr) 
+                OTOC_arr = OTOC_f_1D.position_matrix.compute_otoc_arr_t(vecs,x_arr,dx,dy,k_arr,vals,m_arr,t_arr,betaa,n_eigen,OTOC_arr) 
                 #OTOC_arr = OTOC.OTOC(t_arr,beta)
-                f =  open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format('1D_Box',betaa,basis_N,n_eigen,t_final),'wb')
+                f =  open("/home/vgs23/Pickle_files/OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format('inv_harmonic',betaa,basis_N,n_eigen,t_final),'wb')
                 #f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,betaa,basis_N,n_eigen,t_final),'wb')
                 pickle.dump(t_arr,f)
                 pickle.dump(OTOC_arr,f)
-                #plt.plot(t_arr,OTOC_arr)
-                #plt.show()
+                plt.plot(t_arr,np.log(OTOC_arr))
+                plt.show()
                 f.close()
         
         print('time 2',time.time()-start_time)
       
-        rc('text', usetex=True)
-        rc('font', family='serif')
-        matplotlib.rcParams.update({'font.size': 17})
-        fig = plt.figure(1)
-        ax = fig.add_subplot(1,1,1)
-        #plt.yscale('log')
-        #ax.set_ylim([0.005,500])
-        #ax.text(20,30, r'$\beta = 1/1000$')
-        plt.xlabel(r'$t$')
-        plt.ylabel(r'$C(t)$')
-        plt.gcf().subplots_adjust(bottom=0.12,left=0.12)
-        for axis in [ax.xaxis, ax.yaxis]:
-            axis.set_major_formatter(ScalarFormatter())
-        #plt.title('OTOC for 1D Box')
-        
-        
-                
-        print('Pot details',Potentials_2D.r_c)
-        color_arr = ['r','g','b','m','c']
-        label_arr = [r'$\beta=1$',r'$\beta=\frac{1}{40}$',r'$\beta=\frac{1}{200}$', r'$\beta=\frac{1}{400}$'] # 'c', 'd']
-        label_arr = [r'$T=1$', r'$T=20$', r'$T=40$', r'$T=100$']#,r'$T=5$'] 
-        count = 0
-        for (beta,colour,lab) in zip(beta_arr,color_arr,label_arr): 
-            f= open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format('1D_Box',beta,basis_N,n_eigen,t_final),'rb')
-            #f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,beta,basis_N,n_eigen,t_final),'rb')
-            #f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.r_c,beta,50,50,3.0),'rb') 
-            t_arr = pickle.load(f)
-            OTOC_arr = pickle.load(f)
-            #print(OTOC_arr)
-            f.close()
-            print('beta','colour', beta, colour) 
-            #print('OTOC_arr',OTOC_arr)
-            ax.plot(t_arr,OTOC_arr,color=colour,label=lab)
-       
+        if(0):
+		rc('text', usetex=True)
+		rc('font', family='serif')
+		matplotlib.rcParams.update({'font.size': 17})
+		fig = plt.figure(1)
+		ax = fig.add_subplot(1,1,1)
+		#plt.yscale('log')
+		#ax.set_ylim([0.005,500])
+		#ax.text(20,30, r'$\beta = 1/1000$')
+		plt.xlabel(r'$t$')
+		plt.ylabel(r'$C(t)$')
+		plt.gcf().subplots_adjust(bottom=0.12,left=0.12)
+		for axis in [ax.xaxis, ax.yaxis]:
+		    axis.set_major_formatter(ScalarFormatter())
+		#plt.title('OTOC for 1D Box')
+				
+		print('Pot details',Potentials_2D.r_c)
+		color_arr = ['r','g','b','m','c']
+		label_arr = [r'$\beta=1$',r'$\beta=\frac{1}{40}$',r'$\beta=\frac{1}{200}$', r'$\beta=\frac{1}{400}$'] # 'c', 'd']
+		label_arr = [r'$T=1$', r'$T=20$', r'$T=40$', r'$T=100$']#,r'$T=5$'] 
+		count = 0
+		for (beta,colour,lab) in zip(beta_arr,color_arr,label_arr): 
+		    f= open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format('1D_Box',beta,basis_N,n_eigen,t_final),'rb')
+		    #f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,beta,basis_N,n_eigen,t_final),'rb')
+		    #f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.r_c,beta,50,50,3.0),'rb') 
+		    t_arr = pickle.load(f)
+		    OTOC_arr = pickle.load(f)
+		    #print(OTOC_arr)
+		    f.close()
+		    print('beta','colour', beta, colour) 
+		    #print('OTOC_arr',OTOC_arr)
+		    ax.plot(t_arr,OTOC_arr,color=colour,label=lab)
+	       
         if(0):
             f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,beta,basis_N,n_eigen,t_final),'rb')
             #f = open("/home/vgs23/Pickle_files/Kubo_OTOC_{}_r_c_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format(pot_key,Potentials_2D.r_c,beta,50,50,3.0),'rb') 
@@ -381,7 +379,7 @@ if(0):
             ax.axvline(x=6.5,ymin=0.0, ymax = 0.7,linestyle='--')
             ax.set_xlim([-0.5,15.5])
         
-        if(1):  # For 1D box
+        if(0):  # For 1D box
             xt = ax.xaxis.get_majorticklocs()
             print(xt)
             xt=np.append(xt,1/np.pi)
@@ -396,8 +394,8 @@ if(0):
             plt.xticks(fontsize=14)
             plt.yticks(fontsize=14)
         
-        plt.savefig('/home/vgs23/Images/OTOC_1DBOX.eps', format='eps',dpi=96)
-        plt.show()
+            plt.savefig('/home/vgs23/Images/OTOC_1DBOX.eps', format='eps',dpi=96)
+            plt.show()
         
         
         
