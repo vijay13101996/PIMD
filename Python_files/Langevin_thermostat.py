@@ -149,5 +149,5 @@ def Theta_constrained_thermalize(ACMD,CMD,Matsubara,M,swarmobj,theta,niter,therm
         while(t<=thermtime):
             vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat)
             t+=deltat
-        print('thermalized theta')
+        #print('thermalized theta')
 

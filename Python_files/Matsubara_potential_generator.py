@@ -12,7 +12,7 @@ def A(i,x):
 
 x = sympy.Symbol('x')
 M = 5
-degree = 4
+degree = 2
 iterate = list(itertools.product(range(M),repeat=degree))
 print('iterate', (iterate))
 potential = sympy.Symbol('')
@@ -23,22 +23,23 @@ Q_tilde_m.extend(Q_tilde_p)
 Q_tilde = Q_tilde_m
 print('here',Q_tilde_m, Q_tilde)
 
-potential = sympy.Symbol('')
-count = 0
-for combi in iterate:
-        print('term {} of'.format(count), len(iterate))
-        count+=1
-        term = sympy.Symbol('')
-        coeff = sympy.Symbol('1')
-        for i in range(degree):
-                term*= Q_tilde[combi[i]]
-                #print('term',i, term,combi[i])
-                coeff*= A(combi[i]-M//2,x)
-                #print('coeff', coeff, combi[i]) 
-        coeff = integrate(coeff, (x,0,1))
-        print('coeff', coeff, term)
-        potential+= term*coeff#Q_tilde[combi[0]]*Q_tilde[combi[1]]*coeff_harmonic(combi[0]-1,combi[1]-1)
-        
+if(1):
+        potential = sympy.Symbol('')
+        count = 0
+        for combi in iterate:
+                print('term {} of'.format(count), len(iterate))
+                count+=1
+                term = sympy.Symbol('')
+                coeff = sympy.Symbol('1')
+                for i in range(degree):
+                        term*= Q_tilde[combi[i]]
+                        #print('term',i, term,combi[i])
+                        coeff*= A(combi[i]-M//2,x)
+                        #print('coeff', coeff, combi[i]) 
+                coeff = integrate(coeff, (x,0,1))
+                print('coeff', coeff, term)
+                potential+= term*coeff#Q_tilde[combi[0]]*Q_tilde[combi[1]]*coeff_harmonic(combi[0]-1,combi[1]-1)
+                
 print('pot', potential)
 
 deriv=1

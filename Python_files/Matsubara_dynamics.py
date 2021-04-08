@@ -88,7 +88,7 @@ def Phase_dep_OTOC_instance(rng,N,M,dpotential,ddpotential,beta,T,n_tp, deltat, 
     rand_boltz = np.random.RandomState(rng)
     swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/swarmobject.beta,np.shape(swarmobject.q))
     
-    #print('rng', rng, swarmobject.p[0])
+    print('rng', rng, swarmobject.p[0])
     #print('theta',theta_arr, theta_arr.dtype)
     
     if(0):
@@ -101,8 +101,9 @@ def Phase_dep_OTOC_instance(rng,N,M,dpotential,ddpotential,beta,T,n_tp, deltat, 
     if(1):
         pool = mp.Pool(5)
         n_inst = 5
+        inst = (4*rng + 1)*np.array(range(n_inst))
         func = partial(OTOC_phase_dep_Matsubara,swarmobject,dpotential,ddpotential,T,n_tp,theta_arr,deltat)
-        results = pool.map(func, range(n_inst))
+        results = pool.map(func, inst)
         pool.close()
         pool.join()
         return np.sum(results,0)/n_inst
@@ -119,7 +120,7 @@ def compute_phase_dep_OTOC(Matsubara_instance,N,M,dpotential,ddpotential,beta,T,
         f = open('/home/vgs23/Pickle_files/Matsubara_phase_dep_OTOC_N_{}_B_{}_inst_{}_dt_{}_M_{}_ntheta_{}.dat'.format(N,beta,i,deltat,M,len(theta_arr)),'wb')
         pickle.dump(tcf,f)
         f.close()
-        print(i,'completed')
+        print(i,'completed',tcf[0])
         print('time',time.time() - start_time)
         
     return tcf

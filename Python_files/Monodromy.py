@@ -281,6 +281,7 @@ def q_RP(sol):
 #-------------------------------------------------------------------------------------------------------------
 count = 0
 def func_Matsubara(y,t,swarmobj,dpotential,ddpotential): 
+    #print('t',t)
     m = swarmobj.m
     n_particles = swarmobj.N
     n_dim = swarmobj.dimension
@@ -292,7 +293,6 @@ def func_Matsubara(y,t,swarmobj,dpotential,ddpotential):
     N = n_particles*n_beads*n_dim
     q = y[:N].reshape(n_particles,n_dim,n_beads)
     p = y[N:2*N].reshape(n_particles,n_dim,n_beads)
-    #swarmobj.setpq(p,q)
     n_mmat = n_particles*n_dim*n_dim*n_beads*n_beads
     Mpp = y[2*N:2*N+n_mmat].reshape(n_particles,n_dim,n_dim,n_beads,n_beads)
     Mpq = y[2*N+n_mmat:2*N+2*n_mmat].reshape(n_particles,n_dim,n_dim,n_beads,n_beads)
@@ -303,7 +303,7 @@ def func_Matsubara(y,t,swarmobj,dpotential,ddpotential):
     
     #print('ddpot', Mpp, np.cos(t))
     #print('matmul',-np.matmul(ddpotential(q)[1][0],Mqp[1,0,0]))
-    #print('ddmpp', dd_mpp[1])
+    #print('ddmpp', dpotential(q)[abs(dpotential(q))>1e4])
 
     dydt = np.concatenate((p.flatten()/m,-dpotential(q).flatten(),dd_mpp.flatten(),dd_mpq.flatten(),Mpp.flatten()/m, Mpq.flatten()/m))
     #print('count', count,t, (Mqq>1e7).any(), np.log(np.linalg.det(Mqq[0,0,:])))
@@ -326,7 +326,7 @@ def ode_instance_Matsubara(swarmobj,tarr,dpotential,ddpotential):
     Mqq = Mpp.copy()
    
     y0=np.concatenate((q.flatten(), p.flatten(),Mpp.flatten(),Mpq.flatten(),Mqp.flatten(),Mqq.flatten()))
-    sol = scipy.integrate.odeint(func_Matsubara,y0,tarr,args = (swarmobj,dpotential,ddpotential),mxstep=100)
+    sol = scipy.integrate.odeint(func_Matsubara,y0,tarr,args = (swarmobj,dpotential,ddpotential),hmax=0.1,hmin=1e-9,mxstep=10000)
     
     return sol
 

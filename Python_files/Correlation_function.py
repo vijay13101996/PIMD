@@ -623,7 +623,7 @@ def OTOC_phase_dep_Matsubara(swarmobj,derpotential,ddpotential,time_corr,n_tp,th
         print('denom final', denom)
         
     for i in range(len(theta_arr)):
-        print('i, theta, time',i,theta_arr[i], time.time()-start_time)
+        #print('i, theta, time',i,theta_arr[i], time.time()-start_time)
         tcf_thetat[:,i] = OTOC_theta(swarmobj,derpotential,ddpotential,theta_arr[i],time_corr,n_tp,deltat,rng_ind+i)
         
     #print('tcf_thetat', tcf_thetat)

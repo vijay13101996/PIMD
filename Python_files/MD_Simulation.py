@@ -52,12 +52,12 @@ if(0):
 
 if(1):
     ### Quartic(Matsubara) potential
-    potential = Matsubara_potential.pot_inv_harmonic_M3
-    dpotential = Matsubara_potential.dpot_inv_harmonic_M3
-    ddpotential = Matsubara_potential.ddpot_inv_harmonic_M3
+    potential = Matsubara_potential.pot_inv_harmonic_M5
+    dpotential = Matsubara_potential.dpot_inv_harmonic_M5
+    ddpotential = Matsubara_potential.ddpot_inv_harmonic_M5
 
 deltat = 0.01
-N = 1000
+N = 10000
 T = 4.0#5.0*deltat#5000.0*deltat#3000*deltat
 
 n_tp = 1000 
@@ -291,10 +291,10 @@ if(Classical==1):
     tcf/=n_instance
         
 if(Matsubara==1):
-    M=3    
+    M=5    
     ntheta = 1
-    theta_arr =  np.linspace(-500.0,500.0,ntheta)
-    Matsubara_instance = [300]#,32,111,251] ### 210 is the index for OTOC, 220 is in progress. Don't use these seeds again. 
+    theta_arr =  np.linspace(-10.0,10.0,ntheta)
+    Matsubara_instance = [3000]#range(2000,2020)#[800]#,900,1000]#,600,700]#,32,111,251] ### 210 is the index for OTOC, 220 is in progress. 400 is used for M=5. Don't use these seeds again. 
     #Matsubara_dynamics.compute_phase_dep_tcf(n_instance, N, M,dpotential,beta,T,n_tp,deltat, theta_arr)
     Matsubara_dynamics.compute_phase_dep_OTOC(Matsubara_instance, N, M, dpotential,ddpotential,beta,T,n_tp,deltat, theta_arr)
     
@@ -312,14 +312,22 @@ if(Matsubara==1):
                 tcf_curr = pickle.load(f)
                 tcf+= tcf_curr
                 print(tcf_curr[:,0])
-                plt.plot(tcf_tarr,np.log(abs(tcf_curr[:,0])),color=color_arr[count], label=beta)
+                plt.plot(tcf_tarr,np.log(abs(tcf_curr[:,0])), label=i)
                 count+=1
                 f.close()
                 print(i,count,'completed', tcf_curr[20])
-
+        tcf/=len(Matsubara_instance)
+        plt.show()
+        if(0):
+                f = open('/home/vgs23/Pickle_files/Matsubara_phase_dep_OTOC_N_{}_B_{}_inst_{}_dt_{}_M_{}_ntheta_{}.dat'.format(N,beta,i,deltat,3,ntheta),'rb')
+                tcf_curr = pickle.load(f)
+                plt.plot(tcf_tarr,np.log(abs(tcf_curr[:,0])), label='M=3')        
+                plt.legend()
+                plt.show()
+        print('tcf', tcf.shape)
+        plt.plot(tcf_tarr,np.log(abs(tcf[:,0])), label = 'Net')
         plt.legend()
         plt.show()
-        tcf/=n_instance
         #print('tcf',tcf,np.log(np.real(tcf)), np.log(-np.imag(tcf)))
         #theta_arr = np.linspace(-10.0,10.0,ntheta)
         plt.title(r'$C_T^{Mats}$ vs $\theta$')
