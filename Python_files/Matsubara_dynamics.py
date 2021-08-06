@@ -133,18 +133,24 @@ def Phase_dep_tcf_instance(rng,N,M,dpotential,beta,T,n_tp, deltat, theta_arr):
         return tcf_thetat
         
 def Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta,inst,ctx):
+        ### FOR M=3, timeout = 300.0(ET: 120s), M = 5, timeout = 1000.0(ET: 330s) 
         func = partial(Matsubara_theta_OTOC,N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta)
-        procs = []
-        for i in inst:
-                p = mp.Process(target=func, args=(i,))
-                procs.append(p) 
-                p.start()
-                #print('start', p.name)
-        for p in procs:
-                p.join(1000.0)
-                if p.is_alive():
-                        p.terminate()
-                        print('end', p.name) 
+        inst_split = utils.chunks(inst,100)
+        #print('inst_split', inst_split)
+        for inst_batch in inst_split:
+                procs = []
+                for i in inst_batch:
+                        p = mp.Process(target=func, args=(i,))
+                        procs.append(p) 
+                        p.start()
+                        #print('start', p.name)
+                for p in procs:
+                        p.join(300.0)
+                        if p.is_alive():
+                                p.terminate()
+                                print('end', p.name)
+
+ 
         #pool = ctx.Pool(min(10,len(inst)))
         #func = partial(Matsubara_theta_OTOC,N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta)
         #pool_map = pool.map(func, inst)

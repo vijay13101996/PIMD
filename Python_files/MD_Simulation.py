@@ -305,13 +305,13 @@ if __name__ == '__main__':
 
          
         if(Matsubara==1):
-            M=5    
-            ntheta = 51
-            theta_arr =  np.linspace(0.0,50.0,ntheta)
+            M=3    
+            ntheta = 501
+            theta_arr =  np.linspace(0.0,500.0,ntheta)
              
-            potential = Matsubara_potential.pot_inv_harmonic_M5
-            dpotential = Matsubara_potential.dpot_inv_harmonic_M5
-            ddpotential = Matsubara_potential.ddpot_inv_harmonic_M5
+            potential = Matsubara_potential.pot_inv_harmonic_M3
+            dpotential = Matsubara_potential.dpot_inv_harmonic_M3
+            ddpotential = Matsubara_potential.ddpot_inv_harmonic_M3
 
             thermtime = 100.0 #a.u.
             tcf_tarr = np.linspace(0,4.0,100)
@@ -320,15 +320,16 @@ if __name__ == '__main__':
 
             #Matsubara_dynamics.Matsubara_phase_coverage(N,M,beta,10,20.0,deltat,dpotential,fprefix,100,0)
             
-            instance = range(30001,31001)#[10000,10001]
+            instance = range(10001,10101)#[10000,10001]
             
             ctx = mp.get_context('spawn')
             start_time = time.time() 
-            Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, 0.0,instance,ctx)
-            print('time', time.time()-start_time)
-            #for i in range(len(theta_arr)):
-            #    Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta_arr[i],instance,ctx)
-                     
+            #Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, 0.0,instance,ctx)
+            
+            for i in range(len(theta_arr)):
+                Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta_arr[i],instance,ctx)
+                print('time', time.time()-start_time)
+                 
             if(0):
                 tcf = np.zeros((len(tcf),ntheta)) + 0j
                 color_arr = ['r','g','b','m','c','k']
