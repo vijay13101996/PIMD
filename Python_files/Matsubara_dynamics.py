@@ -6,13 +6,75 @@ Created on Tue Dec 17 14:37:29 2019
 @author: vgs23
 """
 import numpy as np
+import Correlation_function
 from Correlation_function import compute_phase_histogram,corr_function_matsubara, corr_function_phaseless_Matsubara, OTOC_phase_dep_Matsubara, corr_function_phase_dep_Matsubara
 import MD_System
-import multiprocessing as mp
+import multiprocessing as mp        
 from functools import partial
 import importlib
 import pickle
 import time
+import utils
+import Langevin_thermostat
+from matplotlib import pyplot as plt
+
+
+def Matsubara_theta_OTOC(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta,rngSeed):
+        
+        swarmobject = MD_System.swarm(N,M,beta,1) #Change dimension when required
+        swarmobject.q = np.zeros((swarmobject.N,swarmobject.dimension,swarmobject.n_beads)) 
+        rng = np.random.RandomState(rngSeed)
+        swarmobject.p = rng.normal(0.0,swarmobject.m/swarmobject.beta,np.shape(swarmobject.q))
+      
+        Langevin_thermostat.Theta_constrained_thermalize(M,swarmobject,theta,thermtime,dpotential,deltat,rng)
+        tcf = Correlation_function.OTOC_theta(swarmobject,dpotential,ddpotential,theta,tcf_tarr,rng)        
+        fname = '{}_theta_{}_S_{}'.format(fprefix,theta,rngSeed)
+        utils.store_1D_plotdata(tcf_tarr,tcf,fname)
+        print('theta = {} Seed = {}, done'.format(theta,rngSeed))
+
+        #plt.plot(tcf_tarr,np.log(abs(tcf)))
+        #plt.show() 
+        
+def Matsubara_phase_coverage(N,M,beta,n_sample,thermtime,deltat,dpotential,fprefix,ntheta,rngSeed):
+        swarmobj = MD_System.swarm(N,M,beta,1) #Change dimension when required
+        swarmobj.q = np.zeros((swarmobj.N,swarmobj.dimension,swarmobj.n_beads)) 
+        rng = np.random.RandomState(rngSeed)
+        swarmobj.p = rng.normal(0.0,swarmobj.m/swarmobj.beta,np.shape(swarmobj.q))
+      
+        denom = 0.0j
+        B_hist = np.zeros(ntheta)
+        thetagrid = np.zeros(ntheta)
+        rearr = Correlation_function.rearrangearr(swarmobj.n_beads)
+        
+        Langevin_thermostat.thermalize(0,0,1,swarmobj.n_beads,swarmobj,dpotential,deltat,thermtime,rng)
+        theta = Correlation_function.matsubara_phase_factor(swarmobj.n_beads,swarmobj,rearr)
+        maxtheta = max(theta) + 0.1*max(theta)
+        mintheta = min(theta) - 0.1*min(theta)
+        
+        for i in range(n_sample):
+            Langevin_thermostat.thermalize(0,0,1,swarmobj.n_beads,swarmobj,dpotential,deltat,thermtime,rng)
+            theta = Correlation_function.matsubara_phase_factor(swarmobj.n_beads,swarmobj,rearr)
+            hist, bin_edges = np.histogram(theta, bins=ntheta, range=(mintheta,maxtheta),density=True)
+            B_hist+=hist/hist.sum()
+            thetagrid+=bin_edges[1:]
+            #print('hist',bin_edges)
+            #plt.hist(theta,bins = ntheta, range=(-100.0,100.0),density=True)
+            
+            #plt.plot(bin_edges[1:],hist)
+            #plt.show()
+            exponent = 1j*(swarmobj.beta)*theta
+            denom+= np.sum(np.exp(exponent))
+            #print('denom', np.sum(np.exp(exponent))/swarmobj.N)
+         
+        denom/=(swarmobj.N*n_sample)
+        B_hist/=n_sample
+        thetagrid/=n_sample
+        plt.plot(thetagrid,B_hist)
+        plt.show()
+        fname = '{}_theta_histogram_S_{}'.format(fprefix,rngSeed)
+        utils.store_1D_plotdata(thetagrid,B_hist,fname)
+
+        #print('denom final, B_hist ', denom, B_hist.sum())
 
 def Matsubara_instance(rng,N,M,dpotential,beta,T,n_tp,deltat):
     """ 
@@ -58,17 +120,7 @@ def Phaseless_Matsubara_instance(rng,N,M,dpotential,beta,T,n_tp,ntheta, deltat):
     pool.join()
     return np.sum(results,0)/n_inst
 
-def Phase_dep_tcf_instance(rng,N,M,dpotential,beta,T,n_tp, deltat, theta_arr):
-    swarmobject = MD_System.swarm(N,M,beta,1)
-
-    swarmobject.q = np.zeros((swarmobject.N,swarmobject.dimension,swarmobject.n_beads)) 
-    rand_boltz = np.random.RandomState(rng)
-    swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/swarmobject.beta,np.shape(swarmobject.q))
-    
-    print('rng', rng, swarmobject.p[0])
-    print('theta',theta_arr[-1], theta_arr.dtype)
-
-    if(1):
+def Phase_dep_tcf_instance(rng,N,M,dpotential,beta,T,n_tp, deltat, theta_arr): 
         pool = mp.Pool(6)
         n_inst = 6
         func = partial(corr_function_phase_dep_Matsubara,swarmobject,dpotential,swarmobject.pos_op,swarmobject.pos_op,T,n_tp,theta_arr,deltat)
@@ -77,41 +129,27 @@ def Phase_dep_tcf_instance(rng,N,M,dpotential,beta,T,n_tp, deltat, theta_arr):
         pool.join()
         return np.sum(results,0)/n_inst
 
-    if(0):
         tcf_thetat = corr_function_phase_dep_Matsubara(swarmobject,dpotential,swarmobject.pos_op,swarmobject.pos_op,T,n_tp,theta_arr,deltat,rng)
         return tcf_thetat
         
-def Phase_dep_OTOC_instance(rng,N,M,dpotential,ddpotential,beta,T,n_tp, deltat, theta_arr):
-    swarmobject = MD_System.swarm(N,M,beta,1)
-
-    swarmobject.q = np.zeros((swarmobject.N,swarmobject.dimension,swarmobject.n_beads)) 
-    rand_boltz = np.random.RandomState(rng)
-    swarmobject.p = rand_boltz.normal(0.0,swarmobject.m/swarmobject.beta,np.shape(swarmobject.q))
-    
-    print('rng', rng, swarmobject.p[0])
-    #print('theta',theta_arr, theta_arr.dtype)
-    
-    if(0):
-        B_hist,C = compute_phase_histogram(10,swarmobject,dpotential,beta,deltat,theta_arr,rand_boltz)
-        f = open('/home/vgs23/Pickle_files/Matsubara_histogram_B_{}_inst_{}_M_{}_deltat_{}_ntheta_{}.dat'.format(N,beta,rng,M,deltat,len(theta_arr)),'wb')
-        pickle.dump(B_hist,f)
-        pickle.dump(C,f)
-        f.close()
-    
-    if(1):
-        pool = mp.Pool(5)
-        n_inst = 5
-        inst = (4*rng + 1)*np.array(range(n_inst))
-        func = partial(OTOC_phase_dep_Matsubara,swarmobject,dpotential,ddpotential,T,n_tp,theta_arr,deltat)
-        results = pool.map(func, inst)
-        pool.close()
-        pool.join()
-        return np.sum(results,0)/n_inst
-
-    if(0):
-        tcf_thetat = OTOC_phase_dep_Matsubara(swarmobject,dpotential,ddpotential,T,n_tp,theta_arr,deltat,rng)
-        return tcf_thetat
-        
+def Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta,inst,ctx):
+        func = partial(Matsubara_theta_OTOC,N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta)
+        procs = []
+        for i in inst:
+                p = mp.Process(target=func, args=(i,))
+                procs.append(p) 
+                p.start()
+                #print('start', p.name)
+        for p in procs:
+                p.join(1000.0)
+                if p.is_alive():
+                        p.terminate()
+                        print('end', p.name) 
+        #pool = ctx.Pool(min(10,len(inst)))
+        #func = partial(Matsubara_theta_OTOC,N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta)
+        #pool_map = pool.map(func, inst)
+        #pool.close()
+                
 def compute_phase_dep_OTOC(Matsubara_instance,N,M,dpotential,ddpotential,beta,T,n_tp,deltat, theta_arr):
     start_time = time.time()    
     for i in Matsubara_instance:

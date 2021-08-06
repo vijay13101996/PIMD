@@ -10,7 +10,11 @@ import numpy as np
 #from OTOC import pos_matrix_elts
 
 
-def pos_matrix_elts(vals,vecs,x_arr,dx,dy,n,k):
+def pos_matrix_elts_1D(vals,vecs,x_arr,dx,dy,n,k):
+    #global vals,vecs,x_arr,dx,dy,basis_N
+    return np.sum(vecs[:,n]*vecs[:,k]*x_arr*dx)
+
+def pos_matrix_elts_2D(vals,vecs,x_arr,dx,dy,n,k):
     #global vals,vecs,x_arr,dx,dy,basis_N
     return np.sum(vecs[:,n]*vecs[:,k]*x_arr*dx*dy)
 
@@ -19,8 +23,8 @@ def two_point_pos_tcf(vals,vecs,x_arr,dx,dy,beta,t,n_eigen):
     #print('norm', np.sum(vecs[:,0]*vecs[:,0]*dx))
     for n in range(n_eigen):
         for k in range(n_eigen):
-            tcf+= np.exp(-beta*vals[n])*pos_matrix_elts(vals,vecs,x_arr,dx,dy,n,k)\
-                *np.exp(1j*(vals[k]-vals[n])*t)*pos_matrix_elts(vals,vecs,x_arr,dx,dy,k,n)
+            tcf+= np.exp(-beta*vals[n])*pos_matrix_elts_1D(vals,vecs,x_arr,dx,dy,n,k)\
+                *np.exp(1j*(vals[k]-vals[n])*t)*pos_matrix_elts_1D(vals,vecs,x_arr,dx,dy,k,n)
     
     Z_partition = 0.0
     for n in range(n_eigen):

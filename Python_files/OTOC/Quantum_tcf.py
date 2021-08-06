@@ -163,34 +163,39 @@ if(Diagonalize_2D==1):
 #------------------------------------------------
 print('time 1',time.time()-start_time)
    
-if(0):
+if(1):
     """
     This part of the code is meant for computing the 2 point
     quantum time correlation functions using DVR
     
     """
 
-    #h5f = h5py.File("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}_Ls_{}_rc_{}_n_barrier_{}.h5".format(pot_key,N,Potentials_2D.Ls,Potentials_2D.r_c,Potentials_2D.n_barrier), 'r')
-    h5f = h5py.File("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}.h5".format(pot_key,N), 'r')
-    vecs = h5f['vecs'][:]
-    vals = h5f['vals'][:]
-    h5f.close()
-    if(1):
+    if(0): # Load Eigenvalues and Eigenvectors from file, if required
+        #h5f = h5py.File("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}_Ls_{}_rc_{}_n_barrier_{}.h5".format(pot_key,N,Potentials_2D.Ls,Potentials_2D.r_c,Potentials_2D.n_barrier), 'r')
+        h5f = h5py.File("/home/vgs23/Pickle_files/Eigen_basis_{}_grid_N_{}.h5".format(pot_key,N), 'r')
+        vecs = h5f['vecs'][:]
+        vals = h5f['vals'][:]
+        h5f.close()
+    
+    if(0): # Use when computing tcf of 2D system
         temp = H_matrix_2D.tuple_index(N)
         x_arr = np.zeros(len(temp))
         for p in range(len(temp)):
             i = temp[p][0]
             x_arr[p] = x[i]
     
-    tarr = np.linspace(0,20,100)
+    tarr = np.linspace(0,10,100)
     tcf_tarr = np.zeros_like(tarr) + 0j
-    print('first',Two_point_tcf.two_point_pos_tcf(vals,vecs,x_arr,dx,dy,0.2,0.0,100))
+    x_arr = x[1:len(x)-1]
+    beta = 0.2
+    print('first',Two_point_tcf.two_point_pos_tcf(vals,vecs,x_arr,dx,dy,beta,0.0,99))
     for i in range(len(tarr)):
-        tcf_tarr[i] = Two_point_tcf.two_point_pos_tcf(vals,vecs,x_arr,dx,dy,0.2,tarr[i],100)
+        tcf_tarr[i] = Two_point_tcf.two_point_pos_tcf(vals,vecs,x_arr,dx,dy,beta,tarr[i],99)
     plt.plot(tarr,np.real(tcf_tarr))#, np.imag(tcf_tarr))
+    #plt.plot(tarr,5*np.cos(2**0.5*tarr))
     plt.show()
     
-if(1):   
+if(0):   
     
     """
     This part of the code shall remain the same, even when other

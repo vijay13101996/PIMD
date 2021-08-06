@@ -36,15 +36,14 @@ class swarm:
         self.n_beads = n_b
         self.beta_n = self.beta/self.n_beads  
         self.w_n = 1/self.beta_n
-        #print('beta_n',beta_n)
-    
+         
         arr = np.array(range(-int(self.n_beads/2),int(self.n_beads/2)+1))*np.pi/self.n_beads
         self.w_arr = 2*self.w_n*np.sin(arr)
         self.w_arr = self.rearrange()[1:]
     
         self.omega = self.friction_param
         self.mass_factor = (self.beta_n*self.w_arr[1:]/self.omega)**2 
-        print('System definition: beta, n_beads, omega',self.beta,self.n_beads,self.omega)
+        #print('System definition: beta, n_beads, omega',self.beta,self.n_beads,self.omega)
         self.w_arr_scaled = np.ones(self.n_beads)#*(self.omega/self.beta_n)#**2
         self.w_arr_scaled[0]=0.0
         self.w_arr_scaled = self.w_arr_scaled[1:]
@@ -55,7 +54,7 @@ class swarm:
         self.ft_rearrange= np.ones(self.n_beads)*(-(2.0/self.n_beads)**0.5)
         self.ft_rearrange[0] = 1/self.n_beads**0.5
 
-        print('ft_rearrange',self.ft_rearrange)
+        #print('ft_rearrange',self.ft_rearrange)
 
         if(self.n_beads%2 == 0):
             self.ft_rearrange[self.n_beads-1]= 1/self.n_beads**0.5

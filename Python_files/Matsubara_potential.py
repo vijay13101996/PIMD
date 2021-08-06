@@ -56,6 +56,15 @@ def ddpot_harmonic_M3(Q):
     ret =  0.5*np.array([[2.0*ones,0.0*ones,0.0*ones], [0.0*ones,2.0*ones,0.0*ones], [0.0*ones,0.0*ones,2.0*ones]])
     return ret.T
 
+def pot_harmonic_M1(Q):
+    return 0.5*Q**2
+
+def dpot_harmonic_M1(Q):
+    return Q 
+
+def ddpot_harmonic_M1(Q):
+    return np.ones_like(Q)
+
 def pot_inv_harmonic_M1(Q):
     lamda = 2.0
     g = 1.0/50

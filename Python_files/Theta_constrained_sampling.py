@@ -27,7 +27,7 @@ def Gram_Schmidt(T):
 
     return T_gram
 
-def CHANGED_theta_constrained_randomize(swarmobj,theta,rng):
+def CHANGED_theta_constrained_randomize(swarmobj,theta,rng): ## FOR ANY DIMENSION: Code to be fixed!
     M = swarmobj.n_beads
     w_marr = 2*np.arange(-int((M-1)/2),int((M-1)/2)+1)*np.pi\
             /(swarmobj.beta)

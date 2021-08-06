@@ -17,7 +17,7 @@ import MD_System
 import Velocity_verlet
 import psutil
 import sys
-from Animation import animate
+from Animation import animate_2D
 import scipy
 
 tarr = []
@@ -142,12 +142,10 @@ def Andersen_thermalize(ACMD,CMD, Matsubara, M, swarmobj, niter, thermtime, dpot
             vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat)
             t+=deltat
 
-def Theta_constrained_thermalize(ACMD,CMD,Matsubara,M,swarmobj,theta,niter,thermtime,dpotential,deltat,rng):
-    #for i in range(niter):
+def Theta_constrained_thermalize(M,swarmobj,theta,thermtime,dpotential,deltat,rng):
         theta_constrained_randomize(swarmobj,theta,rng)
         t=0.0
         while(t<=thermtime):
-            vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat)
+            vv_step(0,0,1,M,swarmobj,dpotential,deltat)
             t+=deltat
-        #print('thermalized theta')
-
+        

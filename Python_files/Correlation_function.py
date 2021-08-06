@@ -20,6 +20,8 @@ import time
 import sys
 import Velocity_verlet
 import Monodromy
+import Animation
+import Matsubara_potential
 
 def corr_function_QCMD(swarmobj,QC_q,QC_p,lambda_curr,A,B,time_corr,deltat,dpotential,rng_ind):
     rng = np.random.RandomState(rng_ind)
@@ -246,7 +248,7 @@ def corr_function_upgrade(ACMD,CMD,Matsubara,M,swarmobj,derpotential,A,B,time_co
     #!!! It is unclear if the TCF is to be scaled by dimension. Beware when you make any changes above.
     return tcf
 
-def rearrangearr(M):
+def rearrangearr(M): #REMOVE THIS!!!
 #    rearr = np.zeros(M,dtype= int)
 #    for i in range(1,int(M/2)+1):
 #            rearr[2*i-1]=i
@@ -256,33 +258,13 @@ def rearrangearr(M):
     rearr = np.array([0])
     return rearr
  
-def matsubara_phase_factor(M,swarmobj,rearr):
-#    P_tilde = scipy.fftpack.rfft(swarmobj.p,axis=2)/MD_System.n_beads**0.5
-#    Q_tilde = scipy.fftpack.rfft(swarmobj.q,axis=2)/MD_System.n_beads**0.5
-#    #print(np.shape(P_tilde),np.shape(Q_tilde))
-#    P_tilde = P_tilde[:,:,:M]
-#    Q_tilde = Q_tilde[:,:,:M]
-#    #print(Q_tilde)
-#    w_marr = 2*np.arange(-int((M-1)/2),int((M-1)/2)+1)*np.pi\
-#            /(MD_System.beta*MD_System.n_beads)
-#    
-#    w_marr = MD_System.w_arr[:M]
-#       
-#    Q_tilde = Q_tilde[:,:,rearr]
-#    theta = (P_tilde*w_marr)
-#    
-#    theta*=Q_tilde
-#    
-#    theta = np.sum(theta,axis=1)  # Dot product.
-#    
-#    theta = np.sum(theta,axis=1) # Sum over matsubara modes
-    #---------------------------------
+def matsubara_phase_factor(swarmobj):
+    M = swarmobj.n_beads
     w_marr = 2*np.arange(-int((M-1)/2),int((M-1)/2)+1)*np.pi\
             /(swarmobj.beta)
     theta = swarmobj.p*w_marr*swarmobj.q[:,:,::-1]
     theta = np.sum(theta,axis=1) # Summing over the dimensions
     theta = np.sum(theta,axis=1) # Summing over the Matsubara modes
-    ## Work out the theta expression once again for higher order Matsubara!
     return theta
 
 #Phase_factor is being calculated correctly!!
@@ -483,8 +465,18 @@ def OTOC_Classical(swarmobj,derpotential,ddpotential,tim,n_tp,deltat,rng_ind):
         swarmobj.p = Monodromy.p_classical(traj_arr,swarmobj)[len(traj_arr)-1]
         tcf_cr = Monodromy.detmqq_classical(traj_arr,swarmobj)
         tcf+= np.sum(tcf_cr,axis=1) #-- Summing up over the particles
-         
+        q = Monodromy.q_classical(traj_arr,swarmobj)
+        p = Monodromy.p_classical(traj_arr,swarmobj)
+        
+        #Energy = p**2/(2*swarmobj.m) + Matsubara_potential.pot_inv_harmonic_M1(q)
+        #print('Energy', Energy)#Matsubara_potential.pot_harmonic_M1(q))  
+        #print('q', q, q[0]*np.cos(2**0.5*tcf_tarr) + (p[0]/(2**0.5*swarmobj.m))*np.sin(2**0.5*tcf_tarr))
+        #plt.plot(tcf_tarr, q[:,0,0])
+        #plt.plot(tcf_tarr, q[0,0,0]*np.cos(2**0.5*tcf_tarr) + (p[0,0,0]/(2**0.5*swarmobj.m))*np.sin(2**0.5*tcf_tarr))
+        #plt.plot(tcf_tarr, Energy[:,0,0])
+        #plt.show()
         #thermalize(0,0,1,swarmobj,derpotential,deltat,20,rng)
+        
         print(time.time()-start_time)
     
     tcf/=(n_approx*swarmobj.N) 
@@ -554,32 +546,24 @@ def OTOC_Matsubara(CMD,Matsubara,M,swarmobj,derpotential,tim,n_tp,deltat,rng_ind
     Quan_arr/=(n_approx*swarmobj.N) 
     return Quan_arr
 
-def OTOC_theta(swarmobj,derpotential,ddpotential,thetag,time_corr,n_tp,deltat,rng_ind):
-    rng = np.random.RandomState(rng_ind)
-    tcf_tarr = np.arange(0,time_corr+0.0001,time_corr/n_tp)
-    tcf = np.zeros_like(tcf_tarr) + 0j
-   
-    Theta_constrained_thermalize(0,0,1,swarmobj.n_beads,swarmobj,thetag,1,200,derpotential,deltat,rng)
-    #print('kin en',swarmobj.sys_kin()/(len(swarmobj.q)*swarmobj.n_beads))
-    n_approx = 1
-    rearr = rearrangearr(swarmobj.n_beads)
-    
-    for j in range(n_approx):     
-        theta = matsubara_phase_factor(swarmobj.n_beads,swarmobj,rearr) 
+def OTOC_theta(swarmobj,derpotential,ddpotential,thetag,tcf_tarr,rng):        
+        ### To check if the distribution has been initialized with the right theta value - It is!
+        #theta = matsubara_phase_factor(swarmobj) 
+        
         traj_arr = Monodromy.ode_instance_Matsubara(swarmobj,tcf_tarr,derpotential,ddpotential)    
-        swarmobj.q = Monodromy.q_Matsubara(traj_arr,swarmobj)[len(traj_arr)-1]
-        swarmobj.p = Monodromy.p_Matsubara(traj_arr,swarmobj)[len(traj_arr)-1]
-        theta = matsubara_phase_factor(swarmobj.n_beads,swarmobj,rearr) 
-        #print('thetaf', len(theta))
+        
+        ### To check if the distribution has the right theta value after integration - It does!
+
+        #swarmobj.q = Monodromy.q_Matsubara(traj_arr,swarmobj)[len(traj_arr)-1]
+        #swarmobj.p = Monodromy.p_Matsubara(traj_arr,swarmobj)[len(traj_arr)-1]
+        #theta = matsubara_phase_factor(swarmobj) 
+
         exponent = 1j*(swarmobj.beta)*thetag
         tcf_cr = Monodromy.detmqq_Matsubara(traj_arr,swarmobj)*np.exp(exponent)
-        #tcf_cr*= np.exp(exponent)  #-- Line to be added after killing off dimension, be extra careful. 
-        tcf+= np.sum(tcf_cr,axis=1) #-- Summing up over the particles
-         
-        #Theta_constrained_thermalize(0,0,1,swarmobj.n_beads,swarmobj,theta,10,20,derpotential,deltat,rng)
-    tcf/=(n_approx*swarmobj.N)
-    #print('tcf',tcf.shape,tcf)
-    return tcf
+        tcf= np.sum(tcf_cr,axis=1) #-- Summing up over the particles
+          
+        tcf/=(swarmobj.N)
+        return tcf
 
 def compute_phase_histogram(n_sample,swarmobj,derpotential,beta,deltat,theta_arr,rng):
     denom = 0.0j

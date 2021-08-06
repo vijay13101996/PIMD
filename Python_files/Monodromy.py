@@ -18,6 +18,7 @@ import multiprocessing as mp
 from functools import partial
 import time
 import cProfile
+import Matsubara_potential
 #import Liquid_Helium_potential
 #dpotential_He = Liquid_Helium_potential.liquid_helium_potential.dpotential
 #vddpotential_He = Liquid_Helium_potential.liquid_helium_potential.vector_ddpotential
@@ -117,7 +118,8 @@ def func_classical(y,t,swarmobj,dpotential,ddpotential):
     dd_mpp = -ddpotential(q)[:,:,None]*Mqp  ## CHANGE HERE FOR MORE THAN 1D
     dd_mpq = -ddpotential(q)[:,:,None]*Mqq
     #print('Mpp', Mpp, np.cos(t)) 
-    dydt = np.concatenate((p.flatten(),-dpotential(q).flatten(),dd_mpp.flatten(),dd_mpq.flatten(),Mpp.flatten()/m, Mpq.flatten()/m)) 
+    #print('Energy', p**2/(2*m) + Matsubara_potential.pot_inv_harmonic_M1(q)) 
+    dydt = np.concatenate((p.flatten()/swarmobj.m,-dpotential(q).flatten(),dd_mpp.flatten(),dd_mpq.flatten(),Mpp.flatten()/m, Mpq.flatten()/m)) 
     return dydt
 
 def ode_instance_classical(swarmobj,tarr,dpotential,ddpotential):
@@ -321,10 +323,9 @@ def ode_instance_Matsubara(swarmobj,tarr,dpotential,ddpotential):
     Mqp= np.zeros_like(Mpp)
     Mqq= np.zeros_like(Mpp)
 
-    # CHANGE THIS LINE AND INITIALIZE IT WITH THE RIGHT DIMENSIONS
     Mpp = np.array([[[np.identity(n_beads) for i in range(n_dim)] for j in range(n_dim)] for k in range(n_particles)])
     Mqq = Mpp.copy()
-   
+        
     y0=np.concatenate((q.flatten(), p.flatten(),Mpp.flatten(),Mpq.flatten(),Mqp.flatten(),Mqq.flatten()))
     sol = scipy.integrate.odeint(func_Matsubara,y0,tarr,args = (swarmobj,dpotential,ddpotential),hmax=0.1,hmin=1e-9,mxstep=10000)
     
@@ -337,10 +338,8 @@ def detmqq_Matsubara(sol,swarmobj):
     n_mmat = n_particles*n_beads**2*n_dim**2
     N = n_particles*n_beads*n_dim
     sol_mqq = sol[:,2*N+3*n_mmat:2*N+4*n_mmat].reshape(len(sol),n_particles,n_dim,n_dim,n_beads,n_beads)
-    ret1 = (np.linalg.det(sol_mqq))**2 
-    #print('sol_mqq', sol_mqq)
-    #print('ret1', ret1.shape)
-    return ret1[:,:,0,0]
+    ret1 = sol_mqq[:,:,0,0,n_beads//2,n_beads//2]**2#(np.linalg.det(sol_mqq))**2 
+    return ret1#[:,:,0,0]
 
 def detmpp_Matsubara(sol,swarmobj): 
     n_particles = swarmobj.N

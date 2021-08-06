@@ -78,7 +78,7 @@ def time_evolve(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,T):
     #energyarr.append(copy(swarmobj.sys_kin() + swarmobj.sys_pot() ))
     count=0
     
-    while (abs(t-T)>2e-3):
+    while (abs(t-T)>1e-5):
         vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat)
         #print(swarmobj.q)
         t+=deltat
