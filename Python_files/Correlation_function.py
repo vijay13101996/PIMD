@@ -553,11 +553,54 @@ def OTOC_theta(swarmobj,derpotential,ddpotential,thetag,tcf_tarr,rng):
         traj_arr = Monodromy.ode_instance_Matsubara(swarmobj,tcf_tarr,derpotential,ddpotential)    
         
         ### To check if the distribution has the right theta value after integration - It does!
-
-        #swarmobj.q = Monodromy.q_Matsubara(traj_arr,swarmobj)[len(traj_arr)-1]
+        #swarmobj.q = monodromy.q_matsubara(traj_arr,swarmobj)[len(traj_arr)-1]
         #swarmobj.p = Monodromy.p_Matsubara(traj_arr,swarmobj)[len(traj_arr)-1]
         #theta = matsubara_phase_factor(swarmobj) 
+        #pind = 74
+        #print('theta {}'.format(pind), theta[pind], swarmobj.q[pind], Matsubara_potential.pot_inv_harmonic_M3(swarmobj.q[pind]) +np.sum(swarmobj.p[pind]**2) )
+        #p = Monodromy.p_Matsubara(traj_arr,swarmobj)[:,:,0,:]
+        #pavg = np.mean(p**2, axis=0)
+        #print('high p', pavg.shape,np.where(pavg>2000.0), swarmobj.p[656])
+      
+        #plt.hist(pavg,bins=100)
+        #plt.show()
 
+        #q = Monodromy.q_Matsubara(traj_arr,swarmobj)[:,:,0,:]
+        #qavg = np.mean(q, axis=0)
+        #plt.hist(qavg,bins=20)
+        #plt.show()
+       
+        if(0):
+                coord_q = np.linspace(-10,10,200)
+                pot_q = Matsubara_potential.pot_inv_harmonic_M1(coord_q)
+                plt.plot(coord_q,pot_q)
+                
+                plt.pause(0.01)
+        
+                im_time = np.linspace(0,swarmobj.beta,100)
+                M=3
+                w_marr = 2*np.arange(-int((M-1)/2),int((M-1)/2)+1)*np.pi/(swarmobj.beta) 
+                anim_data = np.zeros((200,100,100)) 
+                for i in range(200):
+                        pind = 74
+                        Ecent = Matsubara_potential.pot_inv_harmonic_centroid(q[i,pind,:]) + p[i,pind,1]**2
+                        ETOT = Matsubara_potential.pot_inv_harmonic_M3(q[i,pind,:]) + np.sum(p[i,pind]**2)
+                        #print('Ecent, Etot', Ecent, ETOT)
+                        #print('% centroid energy', Ecent/ETOT)  
+                        #plt.plot(q[i,pind,1], Ecent,color='r')
+                        x = q[i,pind,1] + 2**0.5*(np.sin(w_marr[0]*im_time)*q[i,pind,2] + np.cos(w_marr[2]*im_time)*q[i,pind,0])
+                        y = rng.uniform(0,1,len(im_time)) 
+                        anim_data[i,:,0] = x
+                        anim_data[i,:,1] = y
+                        #plt.plot(coord_q,pot_q)
+                        #plt.scatter(x,y,color='r')
+                        #plt.plot(x,y,color='r') 
+                Animation.animate_2D(anim_data,-80,80,-20,20)        
+                plt.show() 
+        #plt.plot(tcf_tarr,q[:,413])
+        #plt.plot(tcf_tarr,p[:,413]**2/120000.0,color='r')
+        #plt.show() 
+        
         exponent = 1j*(swarmobj.beta)*thetag
         tcf_cr = Monodromy.detmqq_Matsubara(traj_arr,swarmobj)*np.exp(exponent)
         tcf= np.sum(tcf_cr,axis=1) #-- Summing up over the particles

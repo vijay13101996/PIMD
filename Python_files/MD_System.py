@@ -47,7 +47,11 @@ class swarm:
         self.w_arr_scaled = np.ones(self.n_beads)#*(self.omega/self.beta_n)#**2
         self.w_arr_scaled[0]=0.0
         self.w_arr_scaled = self.w_arr_scaled[1:]
-    
+  
+        self.M=self.n_beads 
+        self.w_marr = 2*np.arange(-int((self.M-1)/2),int((self.M-1)/2)+1)*np.pi\
+            /(self.beta)
+ 
         self.cosw_arr = np.cos(self.w_arr)
         self.sinw_arr = np.sin(self.w_arr)
 

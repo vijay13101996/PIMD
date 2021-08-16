@@ -313,23 +313,25 @@ if __name__ == '__main__':
             dpotential = Matsubara_potential.dpot_inv_harmonic_M3
             ddpotential = Matsubara_potential.ddpot_inv_harmonic_M3
 
-            thermtime = 100.0 #a.u.
-            tcf_tarr = np.linspace(0,4.0,100)
+            thermtime = 5.0 #a.u. 5 for T=5
+            tcf_tarr = np.linspace(0,4.0,200)
             theta = 0.0
             fprefix = 'Matsubara_theta_OTOC_T_{}_M_{}_N_{}'.format(T_au,M,N)
 
             #Matsubara_dynamics.Matsubara_phase_coverage(N,M,beta,10,20.0,deltat,dpotential,fprefix,100,0)
             
-            instance = range(10001,10101)#[10000,10001]
+            instance = range(100001,100101)#[10000,10001]
             
             ctx = mp.get_context('spawn')
             start_time = time.time() 
-            #Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, 0.0,instance,ctx)
+            #Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, 500.0,instance,ctx)
             
             for i in range(len(theta_arr)):
                 Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta_arr[i],instance,ctx)
                 print('time', time.time()-start_time)
+            print('time', time.time()-start_time)
                  
+ 
             if(0):
                 tcf = np.zeros((len(tcf),ntheta)) + 0j
                 color_arr = ['r','g','b','m','c','k']

@@ -6,7 +6,7 @@ def store_1D_plotdata(x,y,fname):
         np.savetxt(datafile_path , data)#,fmt = ['%f','%f'])
 
 def read_1D_plotdata(fname):
-        data = np.loadtxt("/home/vgs23/Pickle_files/{}.txt".format(fname),dtype=complex)
+        data = np.loadtxt("{}".format(fname),dtype=complex)
         return data
 
 def chunks(L, n): 

@@ -54,19 +54,17 @@ def CHANGED_theta_constrained_randomize(swarmobj,theta,rng): ## FOR ANY DIMENSIO
         swarmobj.p[:,i,:] =np.einsum('ijk,ik->ij', T[:,i],Pi[:,i])  # Solving for the momentum distribution
     
 def theta_constrained_randomize(swarmobj,theta,rng):
-    M = swarmobj.n_beads
-    w_marr = 2*np.arange(-int((M-1)/2),int((M-1)/2)+1)*np.pi\
-            /(swarmobj.beta)
-
     # Sampling the position distribution
-    swarmobj.q = rng.normal(0,1,np.shape(swarmobj.q))
+    #swarmobj.q = rng.normal(0,1,np.shape(swarmobj.q))
 
     # Scaling factor for Pi_0 
-    R = np.sum(w_marr**2*swarmobj.q[...,::-1]**2,axis=2)**0.5
+    R = np.sum(swarmobj.w_marr**2*swarmobj.q[...,::-1]**2,axis=2)**0.5
 
     # First column of the unitary transformation matrix
-    T0 = w_marr*swarmobj.q[...,::-1]/R   
+    T0 = swarmobj.w_marr*swarmobj.q[...,::-1]/R   
 
+    M = swarmobj.M
+    
     T = rng.rand(len(swarmobj.q),M,M)
     T[...,0] = T0[:,0,:]
 
@@ -78,11 +76,23 @@ def theta_constrained_randomize(swarmobj,theta,rng):
     
     # Setting Pi_0 to theta/R, so that the resultant distribution has the required theta
     Pi[:,0] = theta/R[:,0]
-    
+   
     # Solving for the momentum distribution
     swarmobj.p[:,0,:] =np.einsum('ijk,ik->ij', T,Pi) #np.matmul(T,Pi)
     #print('theta',np.sum(swarmobj.p*w_marr*swarmobj.q[...,::-1],axis=2))
+    for i in range(1000):
+        if(R[i]<2.0):
+                print('i q', i, swarmobj.q[i],R[i])
+    #print('T pi p R', T[413], Pi[413],swarmobj.q[413], R[413], R.shape) 
+    #print('p', swarmobj.p[413])
 
+def centrifugal_term(swarmobj,theta):
+    Rsq = np.sum(swarmobj.w_marr**2*swarmobj.q[...,::-1]**2,axis=2)[:,None]
+    const = theta**2/swarmobj.m 
+    dpot = (-const/Rsq**2)*swarmobj.w_marr[::-1]**2*swarmobj.q  ### Check the force term here. There is some unseemly behaviour
+    #print('R', Rsq[951]**0.5,const/Rsq[951,0])
+    return dpot
+ 
 if(0):
     # Comment out this section too, and rewrite it as a unit test procedure.
     T = np.random.random((1,3,3))

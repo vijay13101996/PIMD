@@ -44,7 +44,7 @@ def O_step(swarmobj,Matsubara,rng):
         swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*swarmobj.ft_rearrange
         gauss_rand = rng.normal(0.0,1.0,np.shape(swarmobj.q))
         swarmobj.p = c1*swarmobj.p + swarmobj.sm*(1/(swarmobj.beta_n))**0.5*c2*gauss_rand 
-        swarmobj.p*=(1/swarmobj.ft_rearrange)
+        swarmobj.p/=swarmobj.ft_rearrange
         swarmobj.p = scipy.fftpack.irfft(swarmobj.p,axis=2) 
     
 def vv_step(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat):

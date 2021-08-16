@@ -22,7 +22,7 @@ from matplotlib import pyplot as plt
 def Matsubara_theta_OTOC(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta,rngSeed):
         
         swarmobject = MD_System.swarm(N,M,beta,1) #Change dimension when required
-        swarmobject.q = np.zeros((swarmobject.N,swarmobject.dimension,swarmobject.n_beads)) 
+        swarmobject.q = np.zeros((swarmobject.N,swarmobject.dimension,swarmobject.n_beads)) + 1.0
         rng = np.random.RandomState(rngSeed)
         swarmobject.p = rng.normal(0.0,swarmobject.m/swarmobject.beta,np.shape(swarmobject.q))
       
@@ -149,7 +149,6 @@ def Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf
                         if p.is_alive():
                                 p.terminate()
                                 print('end', p.name)
-
  
         #pool = ctx.Pool(min(10,len(inst)))
         #func = partial(Matsubara_theta_OTOC,N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta)

@@ -12,14 +12,14 @@ from numpy import linalg as LA
 from numpy.fft import fft,ifft
 from multiprocessing import Process
 from Velocity_verlet import vv_step, vv_step_thermostat, vv_step_qcmd_thermostat, vv_step_baqcmd_thermostat
-from Theta_constrained_sampling import theta_constrained_randomize
+from Theta_constrained_sampling import theta_constrained_randomize, centrifugal_term
 import MD_System
 import Velocity_verlet
 import psutil
 import sys
 from Animation import animate_2D
 import scipy
-
+import Matsubara_potential
 tarr = []
 ethermarr= []
 qarr =[]
@@ -84,7 +84,7 @@ def qcmd_thermalize(QCMD,swarmobj,QC_q,QC_p,lambda_curr,dpotential,deltat,thermt
             plt.show()
         count+=1
 
-def thermalize(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): # Thermalize is working well.
+def thermalize(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): # Thermalize is working fine.
     
     """
     This function 'thermalizes' the given system using Langevin thermostat
@@ -114,7 +114,8 @@ def thermalize(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): #
     #parr.append(swarmobj.p.copy())
     #count=0
     #--------------------------------------------------------------------------------------- Beware of memory leaks when using any of the tools above!!!!!
-    
+    tarr = []
+    Earr = []
     Velocity_verlet.set_therm_param(deltat,swarmobj.gamma)
     
     while (t<=thermtime):
@@ -123,8 +124,13 @@ def thermalize(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,thermtime,rng): #
                     sys.exit()
         vv_step_thermostat(ACMD,CMD,Matsubara,M,swarmobj,dpotential,deltat,etherm,rng)
         t+=deltat
-        #count+=1
         
+        #tarr.append(t)
+        #Earr.append(np.sum(swarmobj.p**2/(2*swarmobj.m))/swarmobj.N)
+    
+    #plt.plot(tarr,Earr)
+    #plt.show()
+                
 def vel_randomize(swarmobj, Matsubara,rng):
     #swarmobj.p = scipy.fftpack.rfft(swarmobj.p,axis=2)*swarmobj.ft_rearrange
     if(Matsubara==1):
@@ -143,6 +149,15 @@ def Andersen_thermalize(ACMD,CMD, Matsubara, M, swarmobj, niter, thermtime, dpot
             t+=deltat
 
 def Theta_constrained_thermalize(M,swarmobj,theta,thermtime,dpotential,deltat,rng):
+        #Sampling the q distribution
+        def dpot_theta(Q):
+               ret1 = dpotential(Q) 
+               ret2 = centrifugal_term(swarmobj,theta)
+               return ret1+ret2
+        Rsq = np.sum(swarmobj.w_marr**2*swarmobj.q[...,::-1]**2,axis=2)
+        
+        thermalize(0,0,1,M,swarmobj,dpot_theta,deltat,thermtime,rng)
+   
         theta_constrained_randomize(swarmobj,theta,rng)
         t=0.0
         while(t<=thermtime):

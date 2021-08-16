@@ -90,6 +90,16 @@ def pot_inv_harmonic_M3(Q):
             g*(1.5*Q_m1**4 + 6.0*Q_m1**2*Q_0**2 + 3.0*Q_m1**2*Q_1**2 + 1.0*Q_0**4 \
             + 6.0*Q_0**2*Q_1**2 + 1.5*Q_1**4) + lamda**4/(64*g)
 
+def pot_inv_harmonic_centroid(Q):
+    Q_m1 = Q[...,0]
+    Q_0  =Q[...,1]
+    Q_1  = Q[...,2]
+    lamda = 2.0
+    g = 1.0/50
+    return -(lamda**2/4.0)*(Q_0**2) + \
+            g*(6.0*Q_m1**2*Q_0**2 + 1.0*Q_0**4 \
+            + 6.0*Q_0**2*Q_1**2)
+
 def dpot_inv_harmonic_M3(Q):
     Q_m1 = Q[...,0].T
     Q_0  =Q[...,1].T
