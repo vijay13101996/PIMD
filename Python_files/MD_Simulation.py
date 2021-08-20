@@ -273,28 +273,21 @@ if __name__ == '__main__':
             #plt.plot(tcf_tarr,np.cos(tcf_tarr)/(MD_System.beta*MD_System.n_beads),color='g')
             plt.show()
         if(Classical==1):
-            Classical_instance = [500]# range(10)#[0] 
-            #Classical_dynamics.compute_classical_OTOC(Classical_instance, N, dpotential, ddpotential, beta, T,n_tp, deltat)
-            Classical_dynamics.compute_classical_tcf(Classical_instance, N, dpotential, beta, T,n_tp, deltat) 
-            tcf = np.zeros(len(tcf))
-            
-            color_arr = ['r','g','b','m','c','k']
-            count = 0
-                
-            for i in Classical_instance:
-                        f = open('/home/vgs23/Pickle_files/Classical_tcf_N_{}_B_{}_inst_{}_dt_{}.dat'.format(N,beta,i,deltat),'rb')
-                        tcf_curr = pickle.load(f)
-                        tcf+= tcf_curr
-                        print(tcf_curr)
-                        plt.plot(tcf_tarr,(tcf_curr), label=i)
-                        count+=1
-                        f.close()
-                        print(i,count,'completed', tcf_curr.shape)
+            potential = Matsubara_potential.pot_inv_harmonic_M1
+            dpotential = Matsubara_potential.dpot_inv_harmonic_M1
+            ddpotential = Matsubara_potential.ddpot_inv_harmonic_M1
 
-            plt.legend()
-            plt.show()
-            tcf/=n_instance
-               
+            thermtime = 100.0 #a.u. 5 for T=5
+            tcf_tarr = np.linspace(0,4.0,200)
+            fprefix = 'Classical_OTOC_T_{}_N_{}'.format(T_au,N)
+            
+            instance = [90]#range(100001,100101)#[10000,10001]
+            
+            ctx = mp.get_context('spawn')
+            start_time = time.time() 
+            Classical_dynamics.Classical_OTOC_instance(N,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix,instance,ctx)
+             
+ 
         # TO DO:
         # 1. Delete all the unnecessary/redundant comments.
         # 2. Assign file name format in this module.
@@ -306,25 +299,25 @@ if __name__ == '__main__':
          
         if(Matsubara==1):
             M=3    
-            ntheta = 501
-            theta_arr =  np.linspace(0.0,500.0,ntheta)
-             
+            ntheta = 301
+            theta_arr =  np.linspace(0.0,75.0,ntheta)
+            #print('theta',theta_arr)
             potential = Matsubara_potential.pot_inv_harmonic_M3
             dpotential = Matsubara_potential.dpot_inv_harmonic_M3
             ddpotential = Matsubara_potential.ddpot_inv_harmonic_M3
 
-            thermtime = 5.0 #a.u. 5 for T=5
+            thermtime = 20.0 #a.u. 5 for T=5
             tcf_tarr = np.linspace(0,4.0,200)
             theta = 0.0
-            fprefix = 'Matsubara_theta_OTOC_T_{}_M_{}_N_{}'.format(T_au,M,N)
+            fprefix = 'Matsubara_theta_OTOC_T_{}_M_{}_N_{}_thermtime_{}_thrange_75.0'.format(T_au,M,N,thermtime)
 
-            #Matsubara_dynamics.Matsubara_phase_coverage(N,M,beta,10,20.0,deltat,dpotential,fprefix,100,0)
+            #Matsubara_dynamics.Matsubara_phase_coverage(N,M,beta,1000,20.0,deltat,dpotential,fprefix,1001,0)
             
             instance = range(100001,100101)#[10000,10001]
             
             ctx = mp.get_context('spawn')
             start_time = time.time() 
-            #Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, 500.0,instance,ctx)
+            #Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, 0.0,instance,ctx)
             
             for i in range(len(theta_arr)):
                 Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta_arr[i],instance,ctx)

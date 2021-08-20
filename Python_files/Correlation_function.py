@@ -449,74 +449,20 @@ def corr_function_matsubara(ACMD,CMD,Matsubara,M,swarmobj,derpotential,A,B,time_
     #print('tcf',tcf)
     return tcf
 
-def OTOC_Classical(swarmobj,derpotential,ddpotential,tim,n_tp,deltat,rng_ind):
-    rng = np.random.RandomState(rng_ind)
-    tcf_tarr = np.arange(0,tim+0.0001,tim/n_tp)
-    tcf = np.zeros_like(tcf_tarr)
-    start_time = time.time()
-    thermalize(0,0,0,1,swarmobj,derpotential,deltat,20,rng)
-    print('Time 1', time.time()-start_time)
-    n_approx = 1
-    print('thermalized', swarmobj.sys_kin()/(swarmobj.N), swarmobj.m, swarmobj.sm, np.sum(swarmobj.p**2))
-    
-    for j in range(n_approx): 
-        traj_arr = Monodromy.ode_instance_classical(swarmobj,tcf_tarr,derpotential,ddpotential)    
-        swarmobj.q = Monodromy.q_classical(traj_arr,swarmobj)[len(traj_arr)-1]
-        swarmobj.p = Monodromy.p_classical(traj_arr,swarmobj)[len(traj_arr)-1]
-        tcf_cr = Monodromy.detmqq_classical(traj_arr,swarmobj)
-        tcf+= np.sum(tcf_cr,axis=1) #-- Summing up over the particles
-        q = Monodromy.q_classical(traj_arr,swarmobj)
-        p = Monodromy.p_classical(traj_arr,swarmobj)
+def OTOC_Classical(swarmobj,dpotential,ddpotential,tcf_tarr,rng):
+    traj_arr = Monodromy.ode_instance_classical(swarmobj,tcf_tarr,dpotential,ddpotential)    
         
-        #Energy = p**2/(2*swarmobj.m) + Matsubara_potential.pot_inv_harmonic_M1(q)
-        #print('Energy', Energy)#Matsubara_potential.pot_harmonic_M1(q))  
-        #print('q', q, q[0]*np.cos(2**0.5*tcf_tarr) + (p[0]/(2**0.5*swarmobj.m))*np.sin(2**0.5*tcf_tarr))
-        #plt.plot(tcf_tarr, q[:,0,0])
-        #plt.plot(tcf_tarr, q[0,0,0]*np.cos(2**0.5*tcf_tarr) + (p[0,0,0]/(2**0.5*swarmobj.m))*np.sin(2**0.5*tcf_tarr))
-        #plt.plot(tcf_tarr, Energy[:,0,0])
-        #plt.show()
-        #thermalize(0,0,1,swarmobj,derpotential,deltat,20,rng)
-        
-        print(time.time()-start_time)
+    #swarmobj.q = Monodromy.q_classical(traj_arr,swarmobj)[len(traj_arr)-1]
+    #swarmobj.p = Monodromy.p_classical(traj_arr,swarmobj)[len(traj_arr)-1]
     
-    tcf/=(n_approx*swarmobj.N) 
+    tcf_cr = Monodromy.detmqq_classical(traj_arr,swarmobj)
+    tcf = np.mean(tcf_cr,axis=1)
+
     return tcf
 
-def OTOC_RP(CMD,Matsubara,M,swarmobj,derpotential,tim,n_tp,deltat,rng_ind):
+def OTOC_RP(CMD,Matsubara,M,swarmobj,derpotential,tim,n_tp,deltat,rng_ind):  ### To be rewritten
     rng = np.random.RandomState(rng_ind)
     tarr = np.arange(0,tim+0.0001,tim/100.0)
-        
-    thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,200,rng)
-    print('Time 1', time.time()-start_time)
-    n_approx = 10
-    Quan_arr = np.zeros_like(tarr)
-    print('thermalized', swarmobj.sys_kin()/(N*n_beads), swarmobj.m, swarmobj.sm, np.sum(swarmobj.p**2))
-       
-    for j in range(n_approx):
-        temp_q = swarmobj.q.transpose(0,2,1)
-        temp_p = swarmobj.p.transpose(0,2,1)
-        print('temp_q',np.shape(temp_q))
-        traj_arr = Monodromy.ode_instance_RP(temp_q,temp_p,tarr) ##
-        if(0): ## This computes the usual 2 point TCF, without symplectic integration 
-            q_arr = np.mean(Monodromy.q_RP(traj_arr),axis=2)
-            A_arr = q_arr.copy()
-            A_arr[len(tarr):,...] = 0.0
-            B_arr = q_arr.copy()
-            print('A_arr', np.shape(A_arr)) 
-            tcf_cr = Correlation_function.convolution(A_arr,B_arr,0)
-            tcf_cr = np.sum(tcf_cr,axis=2) #Summing up over dimensions
-            tcf_cr = np.sum(tcf_cr,axis=1) #Summing up over the number of particles
-            print('tcf',np.shape(tcf_cr))
-        print('Time 2', time.time()-start_time)
-        Quan_arr+= np.sum(Monodromy.detmqq_RP(traj_arr),axis=1)#tcf_cr[:len(tarr)]#
-        thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,100,rng)
-    
-    Quan_arr/=(n_approx*swarmobj.N) 
-    return Quan_arr
-
-def OTOC_Matsubara(CMD,Matsubara,M,swarmobj,derpotential,tim,n_tp,deltat,rng_ind): ##To be written!
-    rng = np.random.RandomState(rng_ind)
-    tarr = np.arange(0,tim+0.0001,tim/n_tp)
         
     thermalize(CMD,Matsubara,M,swarmobj,derpotential,deltat,200,rng)
     print('Time 1', time.time()-start_time)
@@ -603,9 +549,8 @@ def OTOC_theta(swarmobj,derpotential,ddpotential,thetag,tcf_tarr,rng):
         
         exponent = 1j*(swarmobj.beta)*thetag
         tcf_cr = Monodromy.detmqq_Matsubara(traj_arr,swarmobj)*np.exp(exponent)
-        tcf= np.sum(tcf_cr,axis=1) #-- Summing up over the particles
+        tcf= np.mean(tcf_cr,axis=1) #-- Summing up over the particles
           
-        tcf/=(swarmobj.N)
         return tcf
 
 def compute_phase_histogram(n_sample,swarmobj,derpotential,beta,deltat,theta_arr,rng):
@@ -629,31 +574,5 @@ def compute_phase_histogram(n_sample,swarmobj,derpotential,beta,deltat,theta_arr
     print('denom final, B_hist ', denom, B_hist.sum())
 
     return B_hist, denom
-
-def OTOC_phase_dep_Matsubara(swarmobj,derpotential,ddpotential,time_corr,n_tp,theta_arr,deltat,rng_ind):
-    tcf_thetat = np.zeros((n_tp+1,len(theta_arr))) +0j
-    start_time =time.time() 
-    
-    n_sample = 10
-    rng = np.random.RandomState(rng_ind)
-    if(0): #For Normalization
-        denom = 0.0j
-        rearr = rearrangearr(swarmobj.n_beads)
-        for i in range(n_sample):
-            thermalize(0,0,1,swarmobj.n_beads,swarmobj,derpotential,deltat,20,rng)
-            theta = matsubara_phase_factor(swarmobj.n_beads,swarmobj,rearr)
-            exponent = 1j*(swarmobj.beta)*theta
-            denom+= np.sum(np.exp(exponent))
-            print('denom', np.sum(np.exp(exponent))/swarmobj.N)
-
-        denom/=(swarmobj.N*n_sample)
-        print('denom final', denom)
-        
-    for i in range(len(theta_arr)):
-        #print('i, theta, time',i,theta_arr[i], time.time()-start_time)
-        tcf_thetat[:,i] = OTOC_theta(swarmobj,derpotential,ddpotential,theta_arr[i],time_corr,n_tp,deltat,rng_ind+i)
-        
-    #print('tcf_thetat', tcf_thetat)
-    return tcf_thetat
 
 

@@ -19,11 +19,6 @@ from functools import partial
 import time
 import cProfile
 import Matsubara_potential
-#import Liquid_Helium_potential
-#dpotential_He = Liquid_Helium_potential.liquid_helium_potential.dpotential
-#vddpotential_He = Liquid_Helium_potential.liquid_helium_potential.vector_ddpotential
-#ddpotential_He =  Liquid_Helium_potential.liquid_helium_potential.ddpotential 
-#Liquid_Helium_potential.liquid_helium_potential.assign_pot_params()
 
 start_time = time.time()
 
@@ -48,9 +43,6 @@ def f(t,r,dxpotential,dypotential,ddpotential1,ddpotential2,ddpotential3,ddpoten
                    mpp1,mpp2,mpp3,mpp4, mpq1,mpq2,mpq3,mpq4])
     
     return drdt
-
-tarr =[]
-marr= []
 
 def solout(t,r):
     x,px,y,py, mpp1,mpp2,mpp3,mpp4,mpq1,mpq2,mpq3,mpq4,mqp1,mqp2,mqp3,mqp4,mqq1,mqq2,mqq3,mqq4=  r
@@ -147,8 +139,9 @@ def detmqq_classical(sol,swarmobj):
     N = n_particles*n_dim
     n_mmat = n_particles*n_dim**2
     sol_mqq = sol[:,2*N+3*n_mmat:2*N+4*n_mmat].reshape(len(sol),n_particles,n_dim,n_dim)
-    print('mqq',np.shape(sol_mqq))
-    return np.linalg.det(sol_mqq)
+    
+    ret = sol_mqq[:,:,0,0]**2#(np.linalg.det(sol_mqq))**2 
+    return ret
 
 def q_classical(sol,swarmobj):  
     n_particles = swarmobj.N

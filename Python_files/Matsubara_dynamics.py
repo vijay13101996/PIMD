@@ -7,7 +7,7 @@ Created on Tue Dec 17 14:37:29 2019
 """
 import numpy as np
 import Correlation_function
-from Correlation_function import compute_phase_histogram,corr_function_matsubara, corr_function_phaseless_Matsubara, OTOC_phase_dep_Matsubara, corr_function_phase_dep_Matsubara
+from Correlation_function import compute_phase_histogram,corr_function_matsubara, corr_function_phaseless_Matsubara,  corr_function_phase_dep_Matsubara
 import MD_System
 import multiprocessing as mp        
 from functools import partial
@@ -33,7 +33,13 @@ def Matsubara_theta_OTOC(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_ta
         print('theta = {} Seed = {}, done'.format(theta,rngSeed))
 
         #plt.plot(tcf_tarr,np.log(abs(tcf)))
-        #plt.show() 
+        #f =  open("/home/vgs23/Pickle_files/OTOC_{}_beta_{}_basis_{}_n_eigen_{}_tfinal_{}.dat".format('inv_harmonic',0.2,50,50,4.0),'rb+')
+        #t_arr = pickle.load(f,encoding='latin1')
+        #OTOC_arr = pickle.load(f,encoding='latin1')
+        #plt.plot(t_arr,np.log(OTOC_arr), linewidth=3,label='Quantum OTOC')
+        #f.close()
+
+        plt.show() 
         
 def Matsubara_phase_coverage(N,M,beta,n_sample,thermtime,deltat,dpotential,fprefix,ntheta,rngSeed):
         swarmobj = MD_System.swarm(N,M,beta,1) #Change dimension when required
@@ -42,38 +48,38 @@ def Matsubara_phase_coverage(N,M,beta,n_sample,thermtime,deltat,dpotential,fpref
         swarmobj.p = rng.normal(0.0,swarmobj.m/swarmobj.beta,np.shape(swarmobj.q))
       
         denom = 0.0j
-        B_hist = np.zeros(ntheta)
-        thetagrid = np.zeros(ntheta)
-        rearr = Correlation_function.rearrangearr(swarmobj.n_beads)
-        
-        Langevin_thermostat.thermalize(0,0,1,swarmobj.n_beads,swarmobj,dpotential,deltat,thermtime,rng)
-        theta = Correlation_function.matsubara_phase_factor(swarmobj.n_beads,swarmobj,rearr)
-        maxtheta = max(theta) + 0.1*max(theta)
-        mintheta = min(theta) - 0.1*min(theta)
-        
+        theta_arr=[]
         for i in range(n_sample):
             Langevin_thermostat.thermalize(0,0,1,swarmobj.n_beads,swarmobj,dpotential,deltat,thermtime,rng)
-            theta = Correlation_function.matsubara_phase_factor(swarmobj.n_beads,swarmobj,rearr)
-            hist, bin_edges = np.histogram(theta, bins=ntheta, range=(mintheta,maxtheta),density=True)
-            B_hist+=hist/hist.sum()
-            thetagrid+=bin_edges[1:]
-            #print('hist',bin_edges)
-            #plt.hist(theta,bins = ntheta, range=(-100.0,100.0),density=True)
-            
-            #plt.plot(bin_edges[1:],hist)
-            #plt.show()
+            theta = Correlation_function.matsubara_phase_factor(swarmobj)
+            theta_arr.extend(theta)
             exponent = 1j*(swarmobj.beta)*theta
             denom+= np.sum(np.exp(exponent))
             #print('denom', np.sum(np.exp(exponent))/swarmobj.N)
-         
-        denom/=(swarmobj.N*n_sample)
-        B_hist/=n_sample
-        thetagrid/=n_sample
-        plt.plot(thetagrid,B_hist)
-        plt.show()
+            print('i=', i, 'done')
+        
+        maxtheta = 500.0#max(theta) + 0.1*max(theta)
+        mintheta = -500.0#min(theta) - 0.1*min(theta)
+        thetagrid = np.linspace(mintheta,maxtheta,ntheta)
+        dtheta=thetagrid[1]-thetagrid[0]
+        
+        maxtheta+=dtheta/2
+        mintheta-=dtheta/2
+        hist, bin_edges = np.histogram(theta_arr, bins=ntheta, range=(mintheta,maxtheta))
+        B_hist=hist/hist.sum()
         fname = '{}_theta_histogram_S_{}'.format(fprefix,rngSeed)
         utils.store_1D_plotdata(thetagrid,B_hist,fname)
 
+        plt.hist(theta_arr,bins = ntheta, range=(mintheta,maxtheta),density=True)
+
+        print('bin edges', bin_edges,B_hist.sum())
+        plt.plot(thetagrid,B_hist)
+        plt.show()
+            
+        denom/=(swarmobj.N*n_sample)
+        #plt.plot(thetagrid,B_hist)
+        #plt.show()
+        
         #print('denom final, B_hist ', denom, B_hist.sum())
 
 def Matsubara_instance(rng,N,M,dpotential,beta,T,n_tp,deltat):
@@ -145,7 +151,7 @@ def Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf
                         p.start()
                         #print('start', p.name)
                 for p in procs:
-                        p.join(300.0)
+                        p.join(1000.0)
                         if p.is_alive():
                                 p.terminate()
                                 print('end', p.name)

@@ -8,6 +8,30 @@ Created on Mon Nov 11 13:31:47 2019
 
 import numpy as np
 
+def pot_harmonic_M1(Q):
+    return 0.5*Q**2
+
+def dpot_harmonic_M1(Q):
+    return Q 
+
+def ddpot_harmonic_M1(Q):
+    return np.ones_like(Q)
+
+def pot_inv_harmonic_M1(Q):
+    lamda = 2.0
+    g = 1.0/50
+    return  -(lamda**2/4.0)*Q**2 + g*Q**4 + lamda**4/(64*g)
+
+def dpot_inv_harmonic_M1(Q):
+    lamda = 2.0
+    g = 1.0/50
+    return -(lamda**2/2.0)*Q + 4*g*Q**3
+
+def ddpot_inv_harmonic_M1(Q):
+    lamda = 2.0
+    g = 1.0/50
+    return -(lamda**2/2.0)*np.ones_like(Q) + 12*g*Q**2
+
 def pot_quartic_M3(Q):
     Q_m1 = Q[...,0]
     Q_0  =Q[...,1]
@@ -55,30 +79,6 @@ def ddpot_harmonic_M3(Q):
     ones = np.ones_like(Q_m1)
     ret =  0.5*np.array([[2.0*ones,0.0*ones,0.0*ones], [0.0*ones,2.0*ones,0.0*ones], [0.0*ones,0.0*ones,2.0*ones]])
     return ret.T
-
-def pot_harmonic_M1(Q):
-    return 0.5*Q**2
-
-def dpot_harmonic_M1(Q):
-    return Q 
-
-def ddpot_harmonic_M1(Q):
-    return np.ones_like(Q)
-
-def pot_inv_harmonic_M1(Q):
-    lamda = 2.0
-    g = 1.0/50
-    return  -(lamda**2/4.0)*Q**2 + g*Q**4 + lamda**4/(64*g)
-
-def dpot_inv_harmonic_M1(Q):
-    lamda = 2.0
-    g = 1.0/50
-    return -(lamda**2/2.0)*Q + 4*g*Q**3
-
-def ddpot_inv_harmonic_M1(Q):
-    lamda = 2.0
-    g = 1.0/50
-    return -(lamda**2/2.0)*np.ones_like(Q) + 12*g*Q**2
 
 def pot_inv_harmonic_M3(Q):
     Q_m1 = Q[...,0]

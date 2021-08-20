@@ -80,9 +80,9 @@ def theta_constrained_randomize(swarmobj,theta,rng):
     # Solving for the momentum distribution
     swarmobj.p[:,0,:] =np.einsum('ijk,ik->ij', T,Pi) #np.matmul(T,Pi)
     #print('theta',np.sum(swarmobj.p*w_marr*swarmobj.q[...,::-1],axis=2))
-    for i in range(1000):
-        if(R[i]<2.0):
-                print('i q', i, swarmobj.q[i],R[i])
+    #for i in range(len(swarmobj.q)):
+    #    if(R[i]<2.0):
+    #            print('i q', i, swarmobj.q[i],R[i])
     #print('T pi p R', T[413], Pi[413],swarmobj.q[413], R[413], R.shape) 
     #print('p', swarmobj.p[413])
 
