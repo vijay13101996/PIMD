@@ -58,30 +58,27 @@ def Matsubara_phase_coverage(N,M,beta,n_sample,thermtime,deltat,dpotential,fpref
             #print('denom', np.sum(np.exp(exponent))/swarmobj.N)
             print('i=', i, 'done')
         
-        maxtheta = 500.0#max(theta) + 0.1*max(theta)
-        mintheta = -500.0#min(theta) - 0.1*min(theta)
+        maxtheta = 75.0#max(theta) + 0.1*max(theta)
+        mintheta = -75.0#min(theta) - 0.1*min(theta)
         thetagrid = np.linspace(mintheta,maxtheta,ntheta)
         dtheta=thetagrid[1]-thetagrid[0]
         
         maxtheta+=dtheta/2
         mintheta-=dtheta/2
         hist, bin_edges = np.histogram(theta_arr, bins=ntheta, range=(mintheta,maxtheta))
-        B_hist=hist/hist.sum()
+        B_hist=hist/(swarmobj.N*n_sample)#/hist.sum()
+        print('B_hist',B_hist.sum())
         fname = '{}_theta_histogram_S_{}'.format(fprefix,rngSeed)
         utils.store_1D_plotdata(thetagrid,B_hist,fname)
 
-        plt.hist(theta_arr,bins = ntheta, range=(mintheta,maxtheta),density=True)
+        #plt.hist(theta_arr,bins = ntheta, range=(mintheta,maxtheta),density=True)
 
-        print('bin edges', bin_edges,B_hist.sum())
-        plt.plot(thetagrid,B_hist)
-        plt.show()
-            
-        denom/=(swarmobj.N*n_sample)
+        #print('bin edges', bin_edges,B_hist.sum())
         #plt.plot(thetagrid,B_hist)
         #plt.show()
+            
+        denom/=(swarmobj.N*n_sample)
         
-        #print('denom final, B_hist ', denom, B_hist.sum())
-
 def Matsubara_instance(rng,N,M,dpotential,beta,T,n_tp,deltat):
     """ 
     This function computes the TCF from Matsubara dynamics.

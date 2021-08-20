@@ -299,8 +299,8 @@ if __name__ == '__main__':
          
         if(Matsubara==1):
             M=3    
-            ntheta = 301
-            theta_arr =  np.linspace(0.0,75.0,ntheta)
+            ntheta = 501
+            theta_arr =  np.linspace(0.0,500.0,ntheta)
             #print('theta',theta_arr)
             potential = Matsubara_potential.pot_inv_harmonic_M3
             dpotential = Matsubara_potential.dpot_inv_harmonic_M3
@@ -311,17 +311,20 @@ if __name__ == '__main__':
             theta = 0.0
             fprefix = 'Matsubara_theta_OTOC_T_{}_M_{}_N_{}_thermtime_{}_thrange_75.0'.format(T_au,M,N,thermtime)
 
-            #Matsubara_dynamics.Matsubara_phase_coverage(N,M,beta,1000,20.0,deltat,dpotential,fprefix,1001,0)
-            
+            start_time = time.time() 
             instance = range(100001,100101)#[10000,10001]
             
-            ctx = mp.get_context('spawn')
-            start_time = time.time() 
-            #Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, 0.0,instance,ctx)
+            for i in instance: 
+                Matsubara_dynamics.Matsubara_phase_coverage(N,M,beta,10,thermtime,deltat,dpotential,fprefix,301,0)
+                        
+            #ctx = mp.get_context('spawn')
+            #for inst in instance:
+            #    print('inst',inst)
+            #Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, 0.75,instance,ctx)
             
-            for i in range(len(theta_arr)):
-                Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta_arr[i],instance,ctx)
-                print('time', time.time()-start_time)
+            #for i in range(len(theta_arr)):
+            #    Matsubara_dynamics.Phase_dep_OTOC_instance(N,M,beta,thermtime,deltat,dpotential,ddpotential,tcf_tarr, fprefix, theta_arr[i],instance,ctx)
+            #    print('time', time.time()-start_time)
             print('time', time.time()-start_time)
                  
  

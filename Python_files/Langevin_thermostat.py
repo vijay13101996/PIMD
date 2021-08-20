@@ -153,12 +153,15 @@ def Theta_constrained_thermalize(M,swarmobj,theta,thermtime,dpotential,deltat,rn
         def dpot_theta(Q):
                ret1 = dpotential(Q) 
                ret2 = centrifugal_term(swarmobj,theta)
+               #Rsq = np.sum(swarmobj.w_marr**2*swarmobj.q[...,::-1]**2,axis=2) 
+               #print('ret1',ret1[397], ret2[397])#Matsubara_potential.dpot_inv_harmonic_M3(Q[397]), theta**2/Rsq[397]**2)
                return ret1+ret2
-        Rsq = np.sum(swarmobj.w_marr**2*swarmobj.q[...,::-1]**2,axis=2)
-        
+        #Rsq = np.sum(swarmobj.w_marr**2*swarmobj.q[...,::-1]**2,axis=2)
+               
         thermalize(0,0,1,M,swarmobj,dpot_theta,deltat,thermtime,rng)
-   
+        
         theta_constrained_randomize(swarmobj,theta,rng)
+        
         t=0.0
         while(t<=thermtime):
             vv_step(0,0,1,M,swarmobj,dpotential,deltat)

@@ -88,9 +88,9 @@ def theta_constrained_randomize(swarmobj,theta,rng):
 
 def centrifugal_term(swarmobj,theta):
     Rsq = np.sum(swarmobj.w_marr**2*swarmobj.q[...,::-1]**2,axis=2)[:,None]
-    const = theta**2/swarmobj.m 
+    const = theta**2/swarmobj.m
+    #print('Rsq',Rsq.max(),np.argmax(Rsq),swarmobj.q[397]) 
     dpot = (-const/Rsq**2)*swarmobj.w_marr[::-1]**2*swarmobj.q  ### Check the force term here. There is some unseemly behaviour
-    #print('R', Rsq[951]**0.5,const/Rsq[951,0])
     return dpot
  
 if(0):
